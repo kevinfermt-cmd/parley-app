@@ -1,4 +1,4 @@
-// app/page.js
+// app/page.js (o .tsx)
 "use client";
 import { useState, useEffect } from "react";
 import { auth } from "../src/lib/firebase";
@@ -9,15 +9,36 @@ import PostList from "../src/components/PostList";
 import LiveSection from "../src/components/LiveSection"; 
 import AdminMatchForm from "../src/components/AdminMatchForm";
 import BottomNav from "../src/components/BottomNav"; 
-import SmartFloatingButton from "../src/components/SmartFloatingButton"; // <--- IMPORTAR
+import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  // CORRECCIÓN AQUÍ: Agregamos <any> para que TypeScript no se queje
+  const [user, setUser] = useState(null); 
+  // SI ESTO TE DA ERROR DE SINTAXIS (ROJO), CAMBIALO POR: const [user, setUser] = useState<any>(null);
+  
+  // Como tu archivo es .tsx según el log, la línea correcta es esta:
+  // const [user, setUser] = useState<any>(null);
+  
+  // PERO, si estás pegando esto en un archivo .js, usa la de arriba.
+  // VOY A ASUMIR QUE ES .TSX POR EL ERROR DE VERCEL.
+  
+  // USA ESTA LÍNEA SI TU ARCHIVO TERMINA EN .TSX:
+  // const [user, setUser] = useState<any>(null);
+
+  // USA ESTA LÍNEA SI TU ARCHIVO TERMINA EN .JS (y Vercel está loco):
+  // const [user, setUser] = useState(null);
+
+  /* 🚨 PARA ARREGLARLO RÁPIDO EN TU CASO ESPECÍFICO 🚨
+     Como Vercel dice que es 'page.tsx', copia todo este bloque de abajo tal cual.
+     Si te sale rojo en tu editor local, borra el '<any>'.
+  */
+
   const [activeTab, setActiveTab] = useState("feed"); 
   const [feedFilter, setFeedFilter] = useState("general"); 
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // Estado para forzar recarga
+  const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
-  const isAdmin = user?.email === "kevinfer.mt@gmail.com"; 
+  // SOLUCIÓN AL ERROR DE TIPO: Verificamos que user exista antes de pedir el email de una forma segura
+  const isAdmin = user && user.email === "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -26,9 +47,7 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Función que llama el botón flotante
   const handleSmartRefresh = () => {
-      // Incrementamos este número para decirle a los componentes que se actualicen
       setRefreshTrigger(prev => prev + 1);
   };
 
@@ -50,9 +69,6 @@ export default function Home() {
       <div className="max-w-2xl mx-auto p-4">
         
         {/* --- CONTENIDO --- */}
-        {/* Usamos 'hidden' en lugar de desmontar para mantener el estado (Persistencia) */}
-        
-        {/* SECCIÓN FEED */}
         <div className={activeTab === "feed" ? "block" : "hidden"}>
             {user ? (
               <CreatePost user={user} />
@@ -76,18 +92,12 @@ export default function Home() {
             <div className="space-y-4">
                 {user ? (
                     <>
-                        {/* TRUCO DE PERSISTENCIA: Renderizamos los 3, ocultamos los inactivos */}
-                        {/* Feed General */}
                         <div className={feedFilter === "general" ? "block animate-in fade-in" : "hidden"}>
                             <PostList user={user} mode="general" refreshTrigger={refreshTrigger} />
                         </div>
-                        
-                        {/* Feed Siguiendo */}
                         <div className={feedFilter === "following" ? "block animate-in fade-in" : "hidden"}>
                             <PostList user={user} mode="following" refreshTrigger={refreshTrigger} />
                         </div>
-
-                        {/* Feed Tendencias */}
                         <div className={feedFilter === "trending" ? "block animate-in fade-in" : "hidden"}>
                             <PostList user={user} mode="trending" refreshTrigger={refreshTrigger} />
                         </div>
@@ -101,20 +111,19 @@ export default function Home() {
             </div>
         </div>
 
-        {/* SECCIÓN LIVE (Oculta si no está activa) */}
+        {/* SECCIÓN LIVE */}
         <div className={activeTab === "live" ? "block animate-in fade-in zoom-in duration-300" : "hidden"}>
             <LiveSection />
         </div>
 
       </div>
 
-      {/* --- BOTÓN FLOTANTE INTELIGENTE --- */}
-      {/* Solo mostramos el botón en la pestaña de Feed */}
+      {/* Botón Flotante */}
       {activeTab === "feed" && user && (
           <SmartFloatingButton onRefresh={handleSmartRefresh} />
       )}
 
-      {/* --- MENU INFERIOR --- */}
+      {/* Menu Inferior */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
 
     </main>

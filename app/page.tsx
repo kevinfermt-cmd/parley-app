@@ -1,4 +1,4 @@
-// app/page.js (o .tsx)
+// app/page.js (o app/page.tsx)
 "use client";
 import { useState, useEffect } from "react";
 import { auth } from "../src/lib/firebase";
@@ -12,32 +12,15 @@ import BottomNav from "../src/components/BottomNav";
 import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  // CORRECCIÓN AQUÍ: Agregamos <any> para que TypeScript no se queje
-  const [user, setUser] = useState(null); 
-  // SI ESTO TE DA ERROR DE SINTAXIS (ROJO), CAMBIALO POR: const [user, setUser] = useState<any>(null);
+  // CORRECCIÓN DEFINITIVA: <any> OBLIGATORIO
+  // Esto le dice a Vercel: "Confía en mí, user tendrá datos, no molestes con el tipo".
+  const [user, setUser] = useState<any>(null); 
   
-  // Como tu archivo es .tsx según el log, la línea correcta es esta:
-  // const [user, setUser] = useState<any>(null);
-  
-  // PERO, si estás pegando esto en un archivo .js, usa la de arriba.
-  // VOY A ASUMIR QUE ES .TSX POR EL ERROR DE VERCEL.
-  
-  // USA ESTA LÍNEA SI TU ARCHIVO TERMINA EN .TSX:
-  // const [user, setUser] = useState<any>(null);
-
-  // USA ESTA LÍNEA SI TU ARCHIVO TERMINA EN .JS (y Vercel está loco):
-  // const [user, setUser] = useState(null);
-
-  /* 🚨 PARA ARREGLARLO RÁPIDO EN TU CASO ESPECÍFICO 🚨
-     Como Vercel dice que es 'page.tsx', copia todo este bloque de abajo tal cual.
-     Si te sale rojo en tu editor local, borra el '<any>'.
-  */
-
   const [activeTab, setActiveTab] = useState("feed"); 
   const [feedFilter, setFeedFilter] = useState("general"); 
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
-  // SOLUCIÓN AL ERROR DE TIPO: Verificamos que user exista antes de pedir el email de una forma segura
+  // Ahora esto no fallará porque 'user' es de tipo <any>
   const isAdmin = user && user.email === "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
@@ -57,7 +40,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className="flex justify-between items-center bg-gray-900 p-4 sticky top-0 z-20 border-b border-gray-800 shadow-md">
         <h1 className="text-xl font-black text-white tracking-tighter italic">
-            PARLEY<span className="text-cyan-400">APP</span>
+            Social<span className="text-cyan-400">Bet</span>
         </h1>
         <div><AuthButton /></div>
       </nav>

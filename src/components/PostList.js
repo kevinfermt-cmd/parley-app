@@ -4,6 +4,23 @@ import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, where, addDoc, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
 import Link from "next/link"; 
+import toast from "react-hot-toast";
+
+// --- FUNCIÓN PARA LOS COLORES DE LAS CASAS ---
+const getBetHouseColor = (house) => {
+    switch (house) {
+        case 'Ecuabet':
+            return 'bg-yellow-400 text-black border border-yellow-500'; // Dorado/Amarillo
+        case 'Betano':
+            return 'bg-orange-600 text-white border border-orange-500'; // Naranja
+        case 'Bet365':
+            return 'bg-green-700 text-white border border-green-500'; // Verde Oscuro
+        case '1xBet':
+            return 'bg-blue-600 text-white border border-blue-500'; // Azul
+        default:
+            return 'bg-gray-700 text-gray-300 border border-gray-600'; // Por defecto
+    }
+};
 
 // --- SUB-COMPONENTE DE COMENTARIOS ---
 function CommentSection({ postId, user }) {
@@ -11,7 +28,6 @@ function CommentSection({ postId, user }) {
     const [newComment, setNewComment] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Cargar comentarios en tiempo real
     useEffect(() => {
         const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -33,35 +49,34 @@ function CommentSection({ postId, user }) {
                 createdAt: serverTimestamp()
             });
             setNewComment("");
+            toast.success("Comentario enviado");
         } catch (error) { console.error(error); }
         setLoading(false);
     };
 
     return (
-        <div className="mt-4 pt-3 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
-            {/* Lista de Comentarios */}
+        <div className="mt-4 pt-3 border-t border-gray-800 animate-in fade-in slide-in-from-top-2">
             <div className="space-y-3 mb-3 max-h-60 overflow-y-auto">
-                {comments.length === 0 && <p className="text-xs text-gray-400 italic">Sé el primero en opinar...</p>}
+                {comments.length === 0 && <p className="text-xs text-gray-500 italic">Sé el primero en opinar...</p>}
                 {comments.map(c => (
                     <div key={c.id} className="flex gap-2 text-sm">
-                        <img src={c.photoURL} className="w-6 h-6 rounded-full mt-1" />
-                        <div className="bg-gray-50 p-2 rounded-lg flex-1">
-                            <span className="font-bold text-xs block text-gray-700">{c.username}</span>
-                            <span className="text-gray-600">{c.text}</span>
+                        <img src={c.photoURL} className="w-6 h-6 rounded-full mt-1 border border-gray-700" />
+                        <div className="bg-gray-800 p-2 rounded-lg flex-1">
+                            <span className="font-bold text-xs block text-gray-300">{c.username}</span>
+                            <span className="text-gray-400">{c.text}</span>
                         </div>
                     </div>
                 ))}
             </div>
-            {/* Input */}
             {user && (
                 <form onSubmit={handleSend} className="flex gap-2">
                     <input 
                         value={newComment}
                         onChange={e => setNewComment(e.target.value)}
                         placeholder="Escribe un comentario..." 
-                        className="flex-1 bg-gray-100 border-0 rounded-full px-3 py-1 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                        className="flex-1 bg-gray-950 border border-gray-700 rounded-full px-3 py-1 text-sm focus:ring-1 focus:ring-cyan-500 outline-none text-gray-200 placeholder-gray-600"
                     />
-                    <button disabled={loading || !newComment.trim()} className="text-blue-600 font-bold text-xs disabled:opacity-50">Publicar</button>
+                    <button disabled={loading || !newComment.trim()} className="text-cyan-500 font-bold text-xs disabled:opacity-50 hover:text-cyan-400 transition">Publicar</button>
                 </form>
             )}
         </div>
@@ -71,10 +86,9 @@ function CommentSection({ postId, user }) {
 // --- COMPONENTE PRINCIPAL ---
 export default function PostList({ user, filterUserId = null }) {
   const [posts, setPosts] = useState([]);
-  const [following, setFollowing] = useState([]); // Lista de a quién sigo yo
-  const [expandedComments, setExpandedComments] = useState({}); // Qué posts tienen comentarios abiertos
+  const [following, setFollowing] = useState([]); 
+  const [expandedComments, setExpandedComments] = useState({}); 
 
-  // 1. Cargar Posts
   useEffect(() => {
     let q;
     if (filterUserId) {
@@ -88,22 +102,19 @@ export default function PostList({ user, filterUserId = null }) {
     return () => unsubscribe();
   }, [filterUserId]);
 
-  // 2. Cargar a quién sigo (para mostrar botones de Seguir/Siguiendo)
   useEffect(() => {
     if (!user) return;
     const fetchFollowing = async () => {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
-            setFollowing(userDoc.data().following || []); // Array de IDs
+            setFollowing(userDoc.data().following || []); 
         }
     };
     fetchFollowing();
   }, [user]);
 
-  // --- ACCIONES ---
-
   const handleLike = async (postId, likesArray) => {
-    if (!user) return alert("Inicia sesión para dar like ❤️");
+    if (!user) return toast.error("Inicia sesión para dar like ❤️");
     const postRef = doc(db, "posts", postId);
     const isLiked = likesArray?.includes(user.uid);
     if (isLiked) await updateDoc(postRef, { likes: arrayRemove(user.uid) });
@@ -111,44 +122,39 @@ export default function PostList({ user, filterUserId = null }) {
   };
 
   const handleFollow = async (authorId) => {
-    if (!user) return alert("Inicia sesión para seguir usuarios");
+    if (!user) return toast.error("Inicia sesión para seguir");
     
-    // Referencia: Yo (user.uid) sigo a Autor (authorId)
-    // Actualizamos MI documento (users/mi_id) agregando a quién sigo
     const myRef = doc(db, "users", user.uid);
     const authorRef = doc(db, "users", authorId);
-
-    // Optimista: Actualizamos estado local rápido
     const isFollowing = following.includes(authorId);
     
     try {
         if (isFollowing) {
-            // Dejar de seguir
             await updateDoc(myRef, { following: arrayRemove(authorId) });
             await updateDoc(authorRef, { followers: arrayRemove(user.uid) });
             setFollowing(prev => prev.filter(id => id !== authorId));
+            toast("Dejaste de seguir", { icon: '👋' });
         } else {
-            // Seguir
-            // Nota: Usamos setDoc con merge por si el usuario no existe aun en DB
             await setDoc(myRef, { following: arrayUnion(authorId) }, { merge: true });
             await setDoc(authorRef, { followers: arrayUnion(user.uid) }, { merge: true });
             setFollowing(prev => [...prev, authorId]);
+            toast.success("Siguiendo usuario");
         }
     } catch (error) { console.error(error); }
   };
 
   const toggleComments = (postId) => {
-    setExpandedComments(prev => ({
-        ...prev,
-        [postId]: !prev[postId]
-    }));
+    setExpandedComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
-  const copyToClipboard = (text) => { navigator.clipboard.writeText(text); alert("Copiado! 📋"); };
+  const copyToClipboard = (text) => { 
+      navigator.clipboard.writeText(text); 
+      toast.success("Copiado al portapapeles 📋"); 
+  };
 
   return (
     <div className="space-y-4">
-      {posts.length === 0 && <p className="text-center text-gray-400 py-10">Cargando jugadas... ⚽</p>}
+      {posts.length === 0 && <p className="text-center text-gray-500 py-10">Cargando jugadas... ⚽</p>}
 
       {posts.map((post) => {
         const isLiked = post.likes?.includes(user?.uid);
@@ -157,25 +163,24 @@ export default function PostList({ user, filterUserId = null }) {
         const isFollowing = following.includes(post.userId);
 
         return (
-          <div key={post.id} className="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-200">
+          <div key={post.id} className="bg-gray-900 p-4 md:p-5 rounded-xl shadow-lg border border-gray-800 transition hover:border-gray-700">
             
-            {/* CABECERA: Usuario + Verificado + Seguir */}
+            {/* CABECERA */}
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center">
                     <Link href={`/profile/${post.userId}`}>
                         <img 
                             src={post.userPhoto || "https://via.placeholder.com/40"} 
-                            className="w-10 h-10 rounded-full mr-3 border border-gray-100 object-cover"
+                            className="w-10 h-10 rounded-full mr-3 border border-gray-700 object-cover"
                         />
                     </Link>
                     <div>
                         <div className="flex items-center gap-1">
-                            <Link href={`/profile/${post.userId}`} className="font-bold text-gray-900 text-sm hover:underline">
+                            <Link href={`/profile/${post.userId}`} className="font-bold text-gray-200 text-sm hover:underline hover:text-cyan-400 transition">
                                 {post.username}
                             </Link>
-                            {/* CHECK AZUL DE VERIFICADO */}
                             {post.isVerified && (
-                                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 text-cyan-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                             )}
@@ -186,14 +191,13 @@ export default function PostList({ user, filterUserId = null }) {
                     </div>
                 </div>
 
-                {/* BOTÓN SEGUIR (Solo si no soy yo) */}
                 {!isMe && user && (
                     <button 
                         onClick={() => handleFollow(post.userId)}
                         className={`text-xs font-bold px-3 py-1 rounded-full border transition
                             ${isFollowing 
-                                ? "bg-white border-gray-300 text-gray-500" 
-                                : "bg-blue-600 border-blue-600 text-white"}
+                                ? "bg-transparent border-gray-600 text-gray-400 hover:text-red-400 hover:border-red-400" 
+                                : "bg-cyan-600 border-cyan-600 text-white hover:bg-cyan-500"}
                         `}
                     >
                         {isFollowing ? "Siguiendo" : "Seguir"}
@@ -203,36 +207,38 @@ export default function PostList({ user, filterUserId = null }) {
 
             {/* CONTENIDO DEL POST */}
             <div className="mb-3">
-              <h4 className="font-black text-gray-800 text-base uppercase tracking-tight">
+              <h4 className="font-black text-gray-100 text-base uppercase tracking-tight">
                 ⚽ {post.match}
               </h4>
-              <p className="text-gray-700 mt-2 text-sm md:text-base leading-relaxed">
+
+              <p className="text-gray-300 mt-2 text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
                 {post.prediction}
               </p>
 
-              {/* TICKET DE APUESTA */}
+              {/* TICKET DE APUESTA (Ahora con colores dinámicos) */}
               {post.betCode && (
-                <div className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100 mt-3">
+                <div className="flex items-center justify-between bg-gray-950/50 p-3 rounded-lg border border-gray-800 mt-3 hover:border-gray-700 transition">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase">
+                        {/* AQUI APLICAMOS LA FUNCIÓN DE COLORES */}
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm ${getBetHouseColor(post.betHouse)}`}>
                             {post.betHouse || "Apuesta"}
                         </span>
-                        <code className="font-mono font-bold text-blue-900 text-sm truncate">
+                        
+                        <code className="font-mono font-bold text-gray-300 text-sm truncate ml-1">
                             {post.betCode}
                         </code>
                     </div>
                     {isLink ? (
-                        <a href={post.betCode} target="_blank" rel="noopener noreferrer" className="text-xs bg-white border border-blue-200 px-3 py-1 rounded font-bold text-blue-700">Ver</a>
+                        <a href={post.betCode} target="_blank" rel="noopener noreferrer" className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded font-bold text-cyan-400 hover:bg-gray-700 hover:text-cyan-300 transition">Ver</a>
                     ) : (
-                        <button onClick={() => copyToClipboard(post.betCode)} className="text-xs bg-white border border-blue-200 px-3 py-1 rounded font-bold text-blue-700">Copiar</button>
+                        <button onClick={() => copyToClipboard(post.betCode)} className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded font-bold text-cyan-400 hover:bg-gray-700 hover:text-cyan-300 transition">Copiar</button>
                     )}
                 </div>
               )}
             </div>
 
             {/* BOTONES INTERACCIÓN */}
-            <div className="flex items-center gap-6 text-gray-500 text-sm border-t pt-3 border-gray-100">
-              {/* Like */}
+            <div className="flex items-center gap-6 text-gray-500 text-sm border-t pt-3 border-gray-800">
               <button 
                 onClick={() => handleLike(post.id, post.likes || [])}
                 className={`flex items-center transition gap-1 ${isLiked ? "text-red-500" : "hover:text-red-500"}`}
@@ -245,10 +251,9 @@ export default function PostList({ user, filterUserId = null }) {
                 <span className="font-bold">{post.likes?.length || 0}</span>
               </button>
 
-              {/* Comentarios */}
               <button 
                 onClick={() => toggleComments(post.id)}
-                className={`flex items-center transition gap-1 ${expandedComments[post.id] ? "text-blue-600" : "hover:text-blue-600"}`}
+                className={`flex items-center transition gap-1 ${expandedComments[post.id] ? "text-cyan-500" : "hover:text-cyan-500"}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" />
@@ -257,7 +262,6 @@ export default function PostList({ user, filterUserId = null }) {
               </button>
             </div>
 
-            {/* SECCIÓN DE COMENTARIOS (Solo si está abierto) */}
             {expandedComments[post.id] && (
                 <CommentSection postId={post.id} user={user} />
             )}

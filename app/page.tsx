@@ -9,13 +9,14 @@ import PostList from "../src/components/PostList";
 import LiveSection from "../src/components/LiveSection"; 
 import AdminMatchForm from "../src/components/AdminMatchForm";
 import BottomNav from "../src/components/BottomNav"; 
+import SmartFloatingButton from "../src/components/SmartFloatingButton"; // <--- IMPORTAR
 
 export default function Home() {
-  // Quitamos <any> para evitar errores si el archivo es .js puro
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("feed"); 
-  
-  // RECUERDA: Pon tu email real aquí para que funcione el panel
+  const [feedFilter, setFeedFilter] = useState("general"); 
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Estado para forzar recarga
+
   const isAdmin = user?.email === "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
@@ -25,72 +26,96 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  // Función que llama el botón flotante
+  const handleSmartRefresh = () => {
+      // Incrementamos este número para decirle a los componentes que se actualicen
+      setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
-    // CAMBIO 1: Fondo principal 'bg-gray-950' (Casi negro) y texto 'text-gray-200'
     <main className="min-h-screen bg-gray-950 text-gray-200 font-sans pb-24">
       
-      {/* Navbar Superior */}
-      {/* CAMBIO 2: bg-gray-900 (Gris oscuro), borde gray-800 */}
+      {/* Navbar */}
       <nav className="flex justify-between items-center bg-gray-900 p-4 sticky top-0 z-20 border-b border-gray-800 shadow-md">
         <h1 className="text-xl font-black text-white tracking-tighter italic">
-            PARLEY<span className="text-cyan-400">APP</span> {/* Acento Celeste */}
+            PARLEY<span className="text-cyan-400">APP</span>
         </h1>
-        <div>
-            <AuthButton />
-        </div>
+        <div><AuthButton /></div>
       </nav>
 
       {isAdmin && (
-        <div className="max-w-2xl mx-auto mt-4 px-4">
-            <AdminMatchForm />
-        </div>
+        <div className="max-w-2xl mx-auto mt-4 px-4"><AdminMatchForm /></div>
       )}
 
       <div className="max-w-2xl mx-auto p-4">
         
         {/* --- CONTENIDO --- */}
-        {activeTab === "feed" ? (
-            // === VISTA DEL FEED ===
-            <>
-                {user ? (
-                  <CreatePost user={user} />
-                ) : (
-                  // Banner de Bienvenida Estilo Neón
-                  <div className="bg-gradient-to-r from-gray-900 to-gray-800 border border-cyan-900/50 text-white p-6 rounded-xl text-center mb-8 shadow-lg mx-2 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500 blur-[50px] opacity-10"></div>
-                    <h2 className="text-2xl font-bold mb-2 relative z-10">¡Únete a la Hinchada!</h2>
-                    <p className="text-gray-400 text-sm relative z-10">Regístrate para ver las fijas y compartir tus jugadas.</p>
-                  </div>
-                )}
+        {/* Usamos 'hidden' en lugar de desmontar para mantener el estado (Persistencia) */}
+        
+        {/* SECCIÓN FEED */}
+        <div className={activeTab === "feed" ? "block" : "hidden"}>
+            {user ? (
+              <CreatePost user={user} />
+            ) : (
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 border border-cyan-900/50 text-white p-6 rounded-xl text-center mb-8 shadow-lg mx-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500 blur-[50px] opacity-10"></div>
+                <h2 className="text-2xl font-bold mb-2 relative z-10">¡Únete a la Hinchada!</h2>
+                <p className="text-gray-400 text-sm relative z-10">Regístrate para ver las fijas y compartir tus jugadas.</p>
+              </div>
+            )}
 
-                <div className="space-y-4">
-                    {user ? (
-                        <PostList user={user} />
-                    ) : (
-                        // Estado Bloqueado Oscuro
-                        <div className="bg-gray-900 p-12 rounded-xl text-center border-2 border-dashed border-gray-800">
-                            <span className="text-4xl block mb-2 opacity-50">🔒</span>
-                            <p className="text-gray-500 font-medium">Contenido exclusivo para miembros</p>
-                        </div>
-                    )}
+            {/* Sub-Nav Feed (Sticky) */}
+            {user && (
+                <div className="flex gap-6 mb-6 px-2 border-b border-gray-800 sticky top-16 z-10 bg-gray-950/95 backdrop-blur pt-2 transition-all">
+                    <button onClick={() => setFeedFilter("general")} className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "general" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}>Para ti</button>
+                    <button onClick={() => setFeedFilter("following")} className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "following" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}>Siguiendo</button>
+                    <button onClick={() => setFeedFilter("trending")} className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "trending" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}>Tendencias 🔥</button>
                 </div>
-            </>
-        ) : (
-            // === VISTA EN VIVO ===
-            <div className="animate-in fade-in zoom-in duration-300">
-                <LiveSection />
+            )}
+
+            <div className="space-y-4">
+                {user ? (
+                    <>
+                        {/* TRUCO DE PERSISTENCIA: Renderizamos los 3, ocultamos los inactivos */}
+                        {/* Feed General */}
+                        <div className={feedFilter === "general" ? "block animate-in fade-in" : "hidden"}>
+                            <PostList user={user} mode="general" refreshTrigger={refreshTrigger} />
+                        </div>
+                        
+                        {/* Feed Siguiendo */}
+                        <div className={feedFilter === "following" ? "block animate-in fade-in" : "hidden"}>
+                            <PostList user={user} mode="following" refreshTrigger={refreshTrigger} />
+                        </div>
+
+                        {/* Feed Tendencias */}
+                        <div className={feedFilter === "trending" ? "block animate-in fade-in" : "hidden"}>
+                            <PostList user={user} mode="trending" refreshTrigger={refreshTrigger} />
+                        </div>
+                    </>
+                ) : (
+                    <div className="bg-gray-900 p-12 rounded-xl text-center border-2 border-dashed border-gray-800">
+                        <span className="text-4xl block mb-2 opacity-50">🔒</span>
+                        <p className="text-gray-500 font-medium">Contenido exclusivo para miembros</p>
+                    </div>
+                )}
             </div>
-        )}
+        </div>
+
+        {/* SECCIÓN LIVE (Oculta si no está activa) */}
+        <div className={activeTab === "live" ? "block animate-in fade-in zoom-in duration-300" : "hidden"}>
+            <LiveSection />
+        </div>
 
       </div>
 
-      {/* --- MENU INFERIOR FIJO --- */}
-      {/* Nota: BottomNav necesitará sus propios cambios de color internos */}
-      <BottomNav 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        user={user} 
-      />
+      {/* --- BOTÓN FLOTANTE INTELIGENTE --- */}
+      {/* Solo mostramos el botón en la pestaña de Feed */}
+      {activeTab === "feed" && user && (
+          <SmartFloatingButton onRefresh={handleSmartRefresh} />
+      )}
+
+      {/* --- MENU INFERIOR --- */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
 
     </main>
   );

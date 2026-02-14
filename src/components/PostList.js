@@ -9,16 +9,11 @@ import toast from "react-hot-toast";
 // --- FUNCIÓN PARA LOS COLORES DE LAS CASAS ---
 const getBetHouseColor = (house) => {
     switch (house) {
-        case 'Ecuabet':
-            return 'bg-yellow-400 text-black border border-yellow-500'; // Dorado/Amarillo
-        case 'Betano':
-            return 'bg-orange-600 text-white border border-orange-500'; // Naranja
-        case 'Bet365':
-            return 'bg-green-700 text-white border border-green-500'; // Verde Oscuro
-        case '1xBet':
-            return 'bg-blue-600 text-white border border-blue-500'; // Azul
-        default:
-            return 'bg-gray-700 text-gray-300 border border-gray-600'; // Por defecto
+        case 'Ecuabet': return 'bg-yellow-400 text-black border border-yellow-500';
+        case 'Betano': return 'bg-orange-600 text-white border border-orange-500';
+        case 'Bet365': return 'bg-green-700 text-white border border-green-500';
+        case '1xBet': return 'bg-blue-600 text-white border border-blue-500';
+        default: return 'bg-gray-700 text-gray-300 border border-gray-600';
     }
 };
 
@@ -83,35 +78,73 @@ function CommentSection({ postId, user }) {
     );
 }
 
-// --- COMPONENTE PRINCIPAL ---
-export default function PostList({ user, filterUserId = null }) {
+// --- COMPONENTE PRINCIPAL (PostList) ---
+export default function PostList({ user, filterUserId = null, mode = "general", refreshTrigger }) {
   const [posts, setPosts] = useState([]);
   const [following, setFollowing] = useState([]); 
   const [expandedComments, setExpandedComments] = useState({}); 
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let q;
-    if (filterUserId) {
-      q = query(collection(db, "posts"), where("userId", "==", filterUserId), orderBy("createdAt", "desc"));
-    } else {
-      q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-    }
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, [filterUserId]);
-
+  // 1. Cargar lista de seguidos (necesario para el filtro 'following')
   useEffect(() => {
     if (!user) return;
-    const fetchFollowing = async () => {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-            setFollowing(userDoc.data().following || []); 
+    // Escuchamos los cambios en el usuario actual para saber a quién sigue
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+        if (docSnap.exists()) {
+            setFollowing(docSnap.data().following || []);
         }
-    };
-    fetchFollowing();
+    });
+    return () => unsubscribe();
   }, [user]);
+
+  // 2. Cargar Posts según el MODO
+  useEffect(() => {
+    setLoading(true);
+    let q;
+
+    // A) Si estamos viendo el perfil de alguien (Prioridad máxima)
+    if (filterUserId) {
+      q = query(collection(db, "posts"), where("userId", "==", filterUserId), orderBy("createdAt", "desc"));
+    } 
+    // B) Modo SIGUIENDO
+    else if (mode === "following") {
+        if (following.length === 0) {
+            setPosts([]); // Si no sigues a nadie, no buscamos nada
+            setLoading(false);
+            return;
+        }
+        // Firestore limita el 'in' a 30 elementos. Tomamos los últimos 30 seguidos.
+        q = query(collection(db, "posts"), where("userId", "in", following.slice(0, 30)), orderBy("createdAt", "desc"));
+    }
+    // C) Modo TENDENCIAS (Últimas 12 horas)
+    else if (mode === "trending") {
+        const twelveHoursAgo = new Date();
+        twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
+        // Traemos posts recientes
+        q = query(collection(db, "posts"), where("createdAt", ">=", twelveHoursAgo));
+    }
+    // D) Modo GENERAL (Para ti)
+    else {
+      q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let fetchedPosts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      // Si es Tendencias, ordenamos por cantidad de Likes en el cliente (JS)
+      if (mode === "trending") {
+          fetchedPosts.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+      } 
+      // Nota: En los otros modos ya viene ordenado por fecha desde Firestore
+
+      setPosts(fetchedPosts);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [filterUserId, mode, following, refreshTrigger]); // <--- AQUÍ AGREGAMOS refreshTrigger
+
+  // --- ACCIONES ---
 
   const handleLike = async (postId, likesArray) => {
     if (!user) return toast.error("Inicia sesión para dar like ❤️");
@@ -132,12 +165,11 @@ export default function PostList({ user, filterUserId = null }) {
         if (isFollowing) {
             await updateDoc(myRef, { following: arrayRemove(authorId) });
             await updateDoc(authorRef, { followers: arrayRemove(user.uid) });
-            setFollowing(prev => prev.filter(id => id !== authorId));
+            // Nota: El estado 'following' se actualiza solo gracias al useEffect de arriba
             toast("Dejaste de seguir", { icon: '👋' });
         } else {
             await setDoc(myRef, { following: arrayUnion(authorId) }, { merge: true });
             await setDoc(authorRef, { followers: arrayUnion(user.uid) }, { merge: true });
-            setFollowing(prev => [...prev, authorId]);
             toast.success("Siguiendo usuario");
         }
     } catch (error) { console.error(error); }
@@ -152,9 +184,31 @@ export default function PostList({ user, filterUserId = null }) {
       toast.success("Copiado al portapapeles 📋"); 
   };
 
+  // --- RENDER ---
+
+  if (loading) return <div className="text-center py-10 animate-pulse text-xs font-bold text-gray-500 uppercase tracking-widest">Cargando jugadas...</div>;
+
   return (
     <div className="space-y-4">
-      {posts.length === 0 && <p className="text-center text-gray-500 py-10">Cargando jugadas... ⚽</p>}
+      
+      {/* MENSAJES DE ESTADO VACÍO SEGÚN EL MODO */}
+      {posts.length === 0 && (
+        <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-dashed border-gray-800">
+            {mode === "following" ? (
+                <>
+                    <p className="text-gray-400 text-sm font-medium">Tu feed de amigos está vacío.</p>
+                    <p className="text-cyan-500 text-[10px] font-bold mt-2 uppercase tracking-wide">¡Ve a 'Para ti' y sigue a los mejores analistas!</p>
+                </>
+            ) : mode === "trending" ? (
+                <>
+                    <p className="text-gray-400 text-sm font-medium">Nada en tendencias por ahora.</p>
+                    <p className="text-gray-600 text-[10px] mt-1">Sé el primero en hacer viral una jugada.</p>
+                </>
+            ) : (
+                <p className="text-gray-500">No hay jugadas disponibles. ⚽</p>
+            )}
+        </div>
+      )}
 
       {posts.map((post) => {
         const isLiked = post.likes?.includes(user?.uid);
@@ -181,7 +235,7 @@ export default function PostList({ user, filterUserId = null }) {
                             </Link>
                             {post.isVerified && (
                                 <svg className="w-4 h-4 text-cyan-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                             )}
                         </div>
@@ -210,16 +264,16 @@ export default function PostList({ user, filterUserId = null }) {
               <h4 className="font-black text-gray-100 text-base uppercase tracking-tight">
                 ⚽ {post.match}
               </h4>
-
+              
+              {/* AQUÍ ESTÁ EL FIX DEL TEXTO: whitespace-pre-wrap */}
               <p className="text-gray-300 mt-2 text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
                 {post.prediction}
               </p>
 
-              {/* TICKET DE APUESTA (Ahora con colores dinámicos) */}
+              {/* TICKET DE APUESTA */}
               {post.betCode && (
                 <div className="flex items-center justify-between bg-gray-950/50 p-3 rounded-lg border border-gray-800 mt-3 hover:border-gray-700 transition">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        {/* AQUI APLICAMOS LA FUNCIÓN DE COLORES */}
                         <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm ${getBetHouseColor(post.betHouse)}`}>
                             {post.betHouse || "Apuesta"}
                         </span>

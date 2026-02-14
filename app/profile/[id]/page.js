@@ -6,7 +6,8 @@ import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, arra
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import PostList from "../../../src/components/PostList"; // Reusamos el componente bonito
+import PostList from "../../../src/components/PostList";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const { id } = useParams(); 
@@ -20,8 +21,8 @@ export default function ProfilePage() {
   const [newUsername, setNewUsername] = useState("");
   const [loadingSave, setLoadingSave] = useState(false);
 
-  // --- CONFIGURACIÓN ADMIN (PON TU EMAIL AQUÍ) ---
-  const MY_ADMIN_EMAIL = "kevinfer.mt@gmail.com"; // <--- CAMBIA ESTO!!!
+  // --- CONFIGURACIÓN ADMIN ---
+  const MY_ADMIN_EMAIL = "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -42,7 +43,6 @@ export default function ProfilePage() {
         setNewBio(docSnap.data().bio || "");
         setNewUsername(docSnap.data().username || "");
       } else {
-        // Perfil fantasma (usuario nuevo que nunca editó su perfil)
         setProfileData({ 
             displayName: "Usuario Nuevo", 
             followers: [] 
@@ -54,205 +54,250 @@ export default function ProfilePage() {
 
   // --- LOGICA DE SEGUIR / DEJAR DE SEGUIR ---
   const handleFollow = async () => {
-    if (!currentUser) return alert("Debes iniciar sesión");
+    if (!currentUser) return toast.error("Debes iniciar sesión para seguir 🔒");
     
-    // Referencia al usuario que QUEREMOS seguir (el dueño del perfil)
     const userToFollowRef = doc(db, "users", id);
-    
-    // Verificamos si ya lo sigo
     const isFollowing = profileData.followers?.includes(currentUser.uid);
 
     try {
         if (isFollowing) {
-            // Dejar de seguir
             await updateDoc(userToFollowRef, { followers: arrayRemove(currentUser.uid) });
             setProfileData(prev => ({
                 ...prev,
                 followers: prev.followers.filter(uid => uid !== currentUser.uid)
             }));
+            toast("Dejaste de seguir", { icon: '👋' });
         } else {
-            // Seguir
-            // Primero aseguramos que el documento exista (por si es usuario nuevo)
             await setDoc(userToFollowRef, { followers: arrayUnion(currentUser.uid) }, { merge: true });
             setProfileData(prev => ({
                 ...prev,
                 followers: [...(prev.followers || []), currentUser.uid]
             }));
+            toast.success(`Ahora sigues a ${profileData.username || "este usuario"}`);
         }
     } catch (error) {
         console.error("Error al seguir:", error);
+        toast.error("Error al conectar");
     }
   };
 
-  // --- GUARDAR PERFIL CON VALIDACIÓN DE USERNAME ---
+  // --- GUARDAR PERFIL ---
   const handleSaveProfile = async () => {
-    if (!newUsername.trim()) return alert("El usuario no puede estar vacío");
+    if (!newUsername.trim()) return toast.error("El usuario no puede estar vacío");
     setLoadingSave(true);
 
-    // 1. Verificar si el username ya existe (y no es el mío actual)
-    if (newUsername !== profileData.username) {
-        const q = query(collection(db, "users"), where("username", "==", newUsername));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            setLoadingSave(false);
-            return alert("⚠️ Ese @usuario ya está ocupado. Prueba otro.");
+    try {
+        if (newUsername !== profileData.username) {
+            const q = query(collection(db, "users"), where("username", "==", newUsername));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                setLoadingSave(false);
+                toast.error(`El usuario @${newUsername} ya existe.`);
+                return;
+            }
         }
+
+        await toast.promise(
+            setDoc(doc(db, "users", id), {
+                bio: newBio,
+                username: newUsername,
+                email: currentUser.email, 
+                photoURL: currentUser.photoURL,
+                displayName: currentUser.displayName,
+                searchKey: newUsername.toLowerCase() 
+            }, { merge: true }),
+            {
+                loading: 'Guardando...',
+                success: '¡Perfil actualizado! ✨',
+                error: 'Error al guardar',
+            }
+        );
+
+        setProfileData({ ...profileData, bio: newBio, username: newUsername });
+        setIsEditing(false);
+
+    } catch (error) {
+        console.error(error);
+    } finally {
+        setLoadingSave(false);
     }
-
-    // 2. Guardar
-    const userRef = doc(db, "users", id);
-    await setDoc(userRef, {
-      bio: newBio,
-      username: newUsername,
-      email: currentUser.email, 
-      photoURL: currentUser.photoURL,
-      displayName: currentUser.displayName,
-      searchKey: newUsername.toLowerCase() // Útil para búsquedas futuras
-    }, { merge: true }); 
-
-    setProfileData({ ...profileData, bio: newBio, username: newUsername });
-    setIsEditing(false);
-    setLoadingSave(false);
-    alert("Perfil actualizado ✅");
   };
 
   const toggleVerify = async () => {
     const userRef = doc(db, "users", id);
     const newStatus = !profileData?.isVerified;
-    await updateDoc(userRef, { isVerified: newStatus });
+    
+    await toast.promise(
+        updateDoc(userRef, { isVerified: newStatus }),
+        {
+            loading: 'Procesando...',
+            success: newStatus ? 'Verificado ✅' : 'Verificación quitada 🗑️',
+            error: 'Error'
+        }
+    );
+    
     setProfileData({ ...profileData, isVerified: newStatus });
   };
 
-  if (!profileData) return <div className="p-10 text-center animate-pulse">Cargando...</div>;
+  if (!profileData) return <div className="p-10 text-center animate-pulse text-gray-500">Cargando perfil...</div>;
 
   const isMyProfile = currentUser?.uid === id;
   const isAdmin = currentUser?.email === MY_ADMIN_EMAIL;
   const isFollowing = profileData.followers?.includes(currentUser?.uid);
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-24">
       
-      {/* --- BARRA DE NAVEGACIÓN SUPERIOR --- */}
-      <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-4">
-        <Link href="/" className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition">
-            ⬅️
+      {/* --- NAVBAR --- */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-50 flex items-center justify-between shadow-sm">
+        <Link href="/" className="text-gray-600 hover:text-black hover:bg-gray-100 p-2 rounded-full transition">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
         </Link>
-        <h1 className="font-bold text-lg text-gray-800">
+        <h1 className="font-bold text-base text-gray-900 truncate max-w-[200px]">
             {profileData.username ? `@${profileData.username}` : "Perfil"}
         </h1>
+        <div className="w-9"></div> 
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
         
         {/* --- TARJETA DEL PERFIL --- */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 text-center relative overflow-hidden">
-            {/* Fondo decorativo */}
-            <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-r from-blue-600 to-blue-400 opacity-20"></div>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 mb-6">
+            
+            {/* Si estamos editando, mostramos el formulario LIMPIO, sin fondos raros */}
+            {isEditing ? (
+                <div className="p-6 animate-in fade-in">
+                    <h2 className="font-bold text-lg text-gray-900 mb-4 pb-2 border-b">Editar Información</h2>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre de Usuario</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-gray-400 font-bold">@</span>
+                                <input 
+                                    value={newUsername} 
+                                    onChange={(e) => setNewUsername(e.target.value.replace(/\s/g, ''))} 
+                                    className="w-full border border-gray-300 p-2 pl-8 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                    placeholder="usuario"
+                                />
+                            </div>
+                        </div>
 
-            <div className="relative z-10">
-                <img 
-                    src={profileData.photoURL || "https://via.placeholder.com/100"} 
-                    className="w-24 h-24 rounded-full border-4 border-white shadow-md mx-auto mb-4 object-cover"
-                />
-                
-                {isEditing ? (
-                    <div className="flex flex-col gap-3 max-w-xs mx-auto animate-in fade-in slide-in-from-bottom-4">
-                        <label className="text-left text-xs font-bold text-gray-500">Nombre de Usuario (@)</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-400">@</span>
-                            <input 
-                                value={newUsername} 
-                                onChange={(e) => setNewUsername(e.target.value.replace(/\s/g, ''))} // Sin espacios
-                                className="border p-2 pl-7 rounded w-full bg-gray-50"
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Biografía</label>
+                            <textarea 
+                                value={newBio} 
+                                onChange={(e) => setNewBio(e.target.value)}
+                                className="w-full border border-gray-300 p-3 rounded-lg bg-gray-50 h-24 resize-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                placeholder="Cuéntanos sobre ti..."
                             />
                         </div>
-                        
-                        <label className="text-left text-xs font-bold text-gray-500">Biografía</label>
-                        <textarea 
-                            value={newBio} 
-                            onChange={(e) => setNewBio(e.target.value)}
-                            className="border p-2 rounded w-full bg-gray-50 h-20 resize-none"
+                    </div>
+                    
+                    <div className="flex gap-3 mt-6">
+                        <button 
+                            onClick={() => setIsEditing(false)} 
+                            className="flex-1 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={handleSaveProfile} 
+                            disabled={loadingSave}
+                            className="flex-1 py-3 rounded-xl font-bold text-white bg-black hover:bg-gray-800 transition shadow-lg"
+                        >
+                            {loadingSave ? "Guardando..." : "Guardar Cambios"}
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                // --- VISTA NORMAL DEL PERFIL ---
+                <>
+                    {/* Fondo Azul Decorativo */}
+                    <div className="h-24 bg-gradient-to-r from-blue-600 to-blue-800"></div>
+                    
+                    <div className="px-6 pb-6 text-center -mt-12">
+                        <img 
+                            src={profileData.photoURL || "https://via.placeholder.com/100"} 
+                            className="w-24 h-24 rounded-full border-4 border-white shadow-md mx-auto mb-3 object-cover bg-white"
                         />
                         
-                        <div className="flex gap-2 justify-center mt-2">
-                            <button 
-                                onClick={handleSaveProfile} 
-                                disabled={loadingSave}
-                                className="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm w-full"
-                            >
-                                {loadingSave ? "Guardando..." : "Guardar Cambios"}
-                            </button>
-                            <button onClick={() => setIsEditing(false)} className="text-red-500 text-sm font-bold w-full border border-red-200 rounded-lg">Cancelar</button>
-                        </div>
-                    </div>
-                ) : (
-                    <>
                         <h2 className="text-2xl font-black flex items-center justify-center gap-1 text-gray-900">
                             {profileData.displayName}
                             {profileData.isVerified && (
-                                <span className="bg-blue-500 text-white text-[10px] p-1 rounded-full w-5 h-5 flex items-center justify-center" title="Verificado">✓</span>
+                                <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                             )}
                         </h2>
-                        <p className="text-gray-500 font-medium mb-1">@{profileData.username || "sin_usuario"}</p>
-                        <p className="text-gray-700 mt-2 max-w-md mx-auto text-sm leading-relaxed">
-                            {profileData.bio || "👋 ¡Hola! Soy nuevo en la comunidad."}
+                        <p className="text-gray-500 font-medium text-sm">@{profileData.username || "usuario"}</p>
+                        
+                        <p className="text-gray-800 mt-4 text-sm leading-relaxed max-w-sm mx-auto">
+                            {profileData.bio || "Sin biografía aún."}
                         </p>
 
-                        {/* Estadísticas */}
-                        <div className="flex justify-center gap-8 my-6 border-y py-4 border-gray-100">
-                            <div>
-                                <span className="block font-black text-xl text-gray-800">{profileData.followers?.length || 0}</span>
-                                <span className="text-xs text-gray-500 font-bold tracking-wider">SEGUIDORES</span>
+                        <div className="flex justify-center gap-12 my-6 py-4 border-t border-b border-gray-50">
+                            <div className="flex flex-col">
+                                <span className="font-black text-xl text-gray-900">{profileData.followers?.length || 0}</span>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Seguidores</span>
                             </div>
-                            <div>
-                                <span className="block font-black text-xl text-gray-800">--</span>
-                                <span className="text-xs text-gray-500 font-bold tracking-wider">ACIERTO</span>
+                            <div className="flex flex-col">
+                                {/* Aquí podrías calcular aciertos reales en el futuro */}
+                                <span className="font-black text-xl text-gray-900">-</span> 
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Racha</span>
                             </div>
                         </div>
                         
-                        {/* Botones de Acción */}
                         <div className="flex gap-3 justify-center">
                             {isMyProfile ? (
                                 <button 
-                                    onClick={() => setIsEditing(true)}
-                                    className="bg-gray-100 text-gray-800 px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition"
+                                    onClick={() => {
+                                        setNewUsername(profileData.username || "");
+                                        setNewBio(profileData.bio || "");
+                                        setIsEditing(true);
+                                    }}
+                                    className="w-full max-w-[200px] bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition shadow-sm"
                                 >
-                                    ⚙️ Editar Perfil
+                                    Editar Perfil
                                 </button>
                             ) : (
                                 <button 
                                     onClick={handleFollow}
-                                    className={`px-8 py-2 rounded-full font-bold text-sm transition shadow-sm
+                                    className={`w-full max-w-[200px] px-4 py-2.5 rounded-xl font-bold text-sm transition shadow-md
                                         ${isFollowing 
-                                            ? "bg-white border-2 border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500" 
-                                            : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md"
+                                            ? "bg-white border border-gray-300 text-gray-600" 
+                                            : "bg-blue-600 text-white hover:bg-blue-700"
                                         }
                                     `}
                                 >
                                     {isFollowing ? "Siguiendo" : "Seguir"}
                                 </button>
                             )}
+                        </div>
 
-                            {/* Botón Admin Secreto */}
-                            {isAdmin && !isMyProfile && (
-                                <button 
-                                    onClick={toggleVerify}
-                                    className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-bold text-sm"
-                                >
+                         {/* Botón de Admin */}
+                         {isAdmin && !isMyProfile && (
+                             <div className="mt-4">
+                                <button onClick={toggleVerify} className="text-xs text-purple-600 font-bold bg-purple-50 px-3 py-1 rounded border border-purple-200">
                                     {profileData.isVerified ? "Quitar Verificado" : "Dar Verificado"}
                                 </button>
-                            )}
-                        </div>
-                    </>
-                )}
-            </div>
+                             </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
 
-        {/* --- LISTA DE POSTS (Ahora bonita) --- */}
-        <h3 className="font-bold text-gray-700 mb-4 ml-1">📜 Historial de Jugadas</h3>
-        
-        {/* Aquí pasamos el ID para que filtre solo los posts de este usuario */}
-        <PostList user={currentUser} filterUserId={id} />
+        {/* --- TÍTULO SECCIÓN POSTS --- */}
+        {!isEditing && (
+            <>
+                <div className="flex items-center gap-2 mb-4 px-2">
+                    <span className="text-xl">📜</span>
+                    <h3 className="font-bold text-gray-800 text-lg">Historial</h3>
+                </div>
+                <PostList user={currentUser} filterUserId={id} />
+            </>
+        )}
 
       </div>
     </div>

@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase"; 
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import toast from "react-hot-toast"; // <--- IMPORTANTE
 
 export default function CreatePost({ user }) {
-  const [isExpanded, setIsExpanded] = useState(false); // <--- ESTADO MAGICO
+  const [isExpanded, setIsExpanded] = useState(false);
   const [match, setMatch] = useState("");
   const [prediction, setPrediction] = useState("");
   const [betHouse, setBetHouse] = useState("Ecuabet");
@@ -36,25 +37,41 @@ export default function CreatePost({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!match || !prediction) return;
+    
+    // Validación visual
+    if (!match || !prediction) {
+        toast.error("¡Faltan datos! Escribe el partido y tu análisis.", {
+            style: { border: '1px solid #FF4B4B', padding: '16px', color: '#713200' },
+            iconTheme: { primary: '#FF4B4B', secondary: '#FFFAEE' },
+        });
+        return;
+    }
 
     setLoading(true);
 
     try {
-      await addDoc(collection(db, "posts"), {
-        userId: user.uid,
-        username: user.displayName,
-        userPhoto: user.photoURL,
-        isVerified: isUserVerified,
-        match: match,           
-        prediction: prediction, 
-        betHouse: betHouse,     
-        betCode: betCode,       
-        likes: [],              
-        createdAt: serverTimestamp(), 
-      });
+      // Usamos toast.promise para manejar la espera, el éxito y el error en un solo bloque
+      await toast.promise(
+        addDoc(collection(db, "posts"), {
+            userId: user.uid,
+            username: user.displayName,
+            userPhoto: user.photoURL,
+            isVerified: isUserVerified,
+            match: match,           
+            prediction: prediction, 
+            betHouse: betHouse,     
+            betCode: betCode,       
+            likes: [],              
+            createdAt: serverTimestamp(), 
+        }),
+        {
+            loading: 'Publicando jugada... 🎲',
+            success: '¡Jugada publicada! Buena suerte 🍀',
+            error: 'Hubo un error al publicar. Inténtalo de nuevo ❌',
+        }
+      );
 
-      // Resetear todo y cerrar
+      // Si la promesa se cumple (éxito), limpiamos el formulario
       setMatch("");
       setPrediction("");
       setBetCode("");
@@ -62,10 +79,10 @@ export default function CreatePost({ user }) {
       
     } catch (error) {
       console.error("Error subiendo post:", error);
-      alert("Hubo un error al publicar.");
+      // El toast ya mostró el error, no necesitamos alert
+    } finally {
+        setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleCancel = () => {

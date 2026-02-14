@@ -11,7 +11,7 @@ import AdminMatchForm from "../src/components/AdminMatchForm";
 import BottomNav from "../src/components/BottomNav"; // <--- IMPORTAMOS EL MENU NUEVO
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);;
   const [activeTab, setActiveTab] = useState("feed"); // 'feed' o 'live'
   
   // RECUERDA: Pon tu email real aquí para que funcione el panel

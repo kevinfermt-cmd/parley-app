@@ -85,10 +85,9 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
   const [expandedComments, setExpandedComments] = useState({}); 
   const [loading, setLoading] = useState(true);
 
-  // 1. Cargar lista de seguidos (necesario para el filtro 'following')
+  // 1. Cargar lista de seguidos
   useEffect(() => {
     if (!user) return;
-    // Escuchamos los cambios en el usuario actual para saber a quién sigue
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
         if (docSnap.exists()) {
             setFollowing(docSnap.data().following || []);
@@ -101,50 +100,75 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
   useEffect(() => {
     setLoading(true);
     let q;
-
-    // A) Si estamos viendo el perfil de alguien (Prioridad máxima)
     if (filterUserId) {
       q = query(collection(db, "posts"), where("userId", "==", filterUserId), orderBy("createdAt", "desc"));
     } 
-    // B) Modo SIGUIENDO
     else if (mode === "following") {
         if (following.length === 0) {
-            setPosts([]); // Si no sigues a nadie, no buscamos nada
+            setPosts([]); 
             setLoading(false);
             return;
         }
-        // Firestore limita el 'in' a 30 elementos. Tomamos los últimos 30 seguidos.
         q = query(collection(db, "posts"), where("userId", "in", following.slice(0, 30)), orderBy("createdAt", "desc"));
     }
-    // C) Modo TENDENCIAS (Últimas 12 horas)
     else if (mode === "trending") {
         const twelveHoursAgo = new Date();
         twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
-        // Traemos posts recientes
         q = query(collection(db, "posts"), where("createdAt", ">=", twelveHoursAgo));
     }
-    // D) Modo GENERAL (Para ti)
     else {
       q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let fetchedPosts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-      // Si es Tendencias, ordenamos por cantidad de Likes en el cliente (JS)
       if (mode === "trending") {
           fetchedPosts.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
       } 
-      // Nota: En los otros modos ya viene ordenado por fecha desde Firestore
-
       setPosts(fetchedPosts);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [filterUserId, mode, following, refreshTrigger]); // <--- AQUÍ AGREGAMOS refreshTrigger
+  }, [filterUserId, mode, following, refreshTrigger]); 
 
   // --- ACCIONES ---
+
+  // NUEVA FUNCIÓN: VALIDACIÓN DE RESULTADOS (SI/NO)
+  const handleValidation = async (postId, type, currentYes, currentNo) => {
+    if (!user) return toast.error("Inicia sesión para validar ✅");
+    
+    const postRef = doc(db, "posts", postId);
+    const uid = user.uid;
+
+    try {
+        if (type === "YES") {
+            // Si ya voté SI, lo quito. Si no, lo pongo y quito el NO.
+            if (currentYes?.includes(uid)) {
+                await updateDoc(postRef, { validationsYes: arrayRemove(uid) });
+            } else {
+                await updateDoc(postRef, { 
+                    validationsYes: arrayUnion(uid),
+                    validationsNo: arrayRemove(uid)
+                });
+                toast.success("Marcado como Acierto 🤑");
+            }
+        } else if (type === "NO") {
+             // Si ya voté NO, lo quito. Si no, lo pongo y quito el SI.
+            if (currentNo?.includes(uid)) {
+                await updateDoc(postRef, { validationsNo: arrayRemove(uid) });
+            } else {
+                await updateDoc(postRef, { 
+                    validationsNo: arrayUnion(uid),
+                    validationsYes: arrayRemove(uid)
+                });
+                toast("Marcado como Fallo", { icon: '📉' });
+            }
+        }
+    } catch (error) {
+        console.error("Error votando:", error);
+    }
+  };
 
   const handleLike = async (postId, likesArray) => {
     if (!user) return toast.error("Inicia sesión para dar like ❤️");
@@ -156,7 +180,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
 
   const handleFollow = async (authorId) => {
     if (!user) return toast.error("Inicia sesión para seguir");
-    
     const myRef = doc(db, "users", user.uid);
     const authorRef = doc(db, "users", authorId);
     const isFollowing = following.includes(authorId);
@@ -165,7 +188,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
         if (isFollowing) {
             await updateDoc(myRef, { following: arrayRemove(authorId) });
             await updateDoc(authorRef, { followers: arrayRemove(user.uid) });
-            // Nota: El estado 'following' se actualiza solo gracias al useEffect de arriba
             toast("Dejaste de seguir", { icon: '👋' });
         } else {
             await setDoc(myRef, { following: arrayUnion(authorId) }, { merge: true });
@@ -190,23 +212,9 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
 
   return (
     <div className="space-y-4">
-      
-      {/* MENSAJES DE ESTADO VACÍO SEGÚN EL MODO */}
       {posts.length === 0 && (
         <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-dashed border-gray-800">
-            {mode === "following" ? (
-                <>
-                    <p className="text-gray-400 text-sm font-medium">Tu feed de amigos está vacío.</p>
-                    <p className="text-cyan-500 text-[10px] font-bold mt-2 uppercase tracking-wide">¡Ve a 'Para ti' y sigue a los mejores analistas!</p>
-                </>
-            ) : mode === "trending" ? (
-                <>
-                    <p className="text-gray-400 text-sm font-medium">Nada en tendencias por ahora.</p>
-                    <p className="text-gray-600 text-[10px] mt-1">Sé el primero en hacer viral una jugada.</p>
-                </>
-            ) : (
-                <p className="text-gray-500">No hay jugadas disponibles. ⚽</p>
-            )}
+             <p className="text-gray-500">No hay jugadas disponibles. ⚽</p>
         </div>
       )}
 
@@ -215,6 +223,12 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
         const isLink = post.betCode?.startsWith("http");
         const isMe = user?.uid === post.userId;
         const isFollowing = following.includes(post.userId);
+
+        // Variables de Votación
+        const votesYes = post.validationsYes || [];
+        const votesNo = post.validationsNo || [];
+        const votedYes = votesYes.includes(user?.uid);
+        const votedNo = votesNo.includes(user?.uid);
 
         return (
           <div key={post.id} className="bg-gray-900 p-4 md:p-5 rounded-xl shadow-lg border border-gray-800 transition hover:border-gray-700">
@@ -264,8 +278,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
               <h4 className="font-black text-gray-100 text-base uppercase tracking-tight">
                 ⚽ {post.match}
               </h4>
-              
-              {/* AQUÍ ESTÁ EL FIX DEL TEXTO: whitespace-pre-wrap */}
               <p className="text-gray-300 mt-2 text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
                 {post.prediction}
               </p>
@@ -277,7 +289,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
                         <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase shadow-sm ${getBetHouseColor(post.betHouse)}`}>
                             {post.betHouse || "Apuesta"}
                         </span>
-                        
                         <code className="font-mono font-bold text-gray-300 text-sm truncate ml-1">
                             {post.betCode}
                         </code>
@@ -289,6 +300,37 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
                     )}
                 </div>
               )}
+            </div>
+
+            {/* --- BARRA DE VALIDACIÓN COMUNITARIA (NUEVO) --- */}
+            <div className="bg-black/20 rounded-lg p-2 mb-3 border border-gray-800 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">¿Acertó el pronóstico?</span>
+                
+                <div className="flex gap-2">
+                    {/* Botón VERDE (SI) */}
+                    <button 
+                        onClick={() => handleValidation(post.id, "YES", votesYes, votesNo)}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition border
+                            ${votedYes 
+                                ? "bg-green-900/30 text-green-400 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.2)]" 
+                                : "bg-gray-800 text-gray-500 border-gray-700 hover:bg-gray-700 hover:text-green-400"}
+                        `}
+                    >
+                        ✅ SI <span className="ml-1 opacity-60 font-mono">{votesYes.length}</span>
+                    </button>
+
+                    {/* Botón ROJO (NO) */}
+                    <button 
+                         onClick={() => handleValidation(post.id, "NO", votesYes, votesNo)}
+                         className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition border
+                            ${votedNo 
+                                ? "bg-red-900/30 text-red-400 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]" 
+                                : "bg-gray-800 text-gray-500 border-gray-700 hover:bg-gray-700 hover:text-red-400"}
+                        `}
+                    >
+                        ❌ NO <span className="ml-1 opacity-60 font-mono">{votesNo.length}</span>
+                    </button>
+                </div>
             </div>
 
             {/* BOTONES INTERACCIÓN */}

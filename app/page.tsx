@@ -15,7 +15,7 @@ import BottomNav from "../src/components/BottomNav";
 import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("feed"); 
   const [feedFilter, setFeedFilter] = useState("general"); 
   const [refreshTrigger, setRefreshTrigger] = useState(0); 

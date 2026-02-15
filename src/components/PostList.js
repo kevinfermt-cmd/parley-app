@@ -2,7 +2,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "../lib/firebase"; 
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, where, addDoc, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
+// AGREGADO: deleteDoc para borrar posts
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, where, addDoc, serverTimestamp, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import Link from "next/link"; 
 import toast from "react-hot-toast";
 
@@ -85,6 +86,9 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
   const [expandedComments, setExpandedComments] = useState({}); 
   const [loading, setLoading] = useState(true);
 
+  // DETECTAR ADMIN
+  const isAdmin = user?.email === "kevinfer.mt@gmail.com";
+
   // 1. Cargar lista de seguidos
   useEffect(() => {
     if (!user) return;
@@ -134,7 +138,20 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
 
   // --- ACCIONES ---
 
-  // NUEVA FUNCIÓN: VALIDACIÓN DE RESULTADOS (SI/NO)
+  // NUEVA FUNCIÓN: BORRAR POST (SOLO ADMIN)
+  const handleDeletePost = async (postId) => {
+    if(!isAdmin) return;
+    if(!confirm("⚠️ ADMIN: ¿Estás seguro de ELIMINAR este post? Esta acción no se puede deshacer.")) return;
+
+    try {
+        await deleteDoc(doc(db, "posts", postId));
+        toast.success("Post eliminado correctamente 🗑️");
+    } catch (error) {
+        console.error("Error borrando post:", error);
+        toast.error("Error al eliminar post");
+    }
+  };
+
   const handleValidation = async (postId, type, currentYes, currentNo) => {
     if (!user) return toast.error("Inicia sesión para validar ✅");
     
@@ -143,7 +160,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
 
     try {
         if (type === "YES") {
-            // Si ya voté SI, lo quito. Si no, lo pongo y quito el NO.
             if (currentYes?.includes(uid)) {
                 await updateDoc(postRef, { validationsYes: arrayRemove(uid) });
             } else {
@@ -154,7 +170,6 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
                 toast.success("Marcado como Acierto 🤑");
             }
         } else if (type === "NO") {
-             // Si ya voté NO, lo quito. Si no, lo pongo y quito el SI.
             if (currentNo?.includes(uid)) {
                 await updateDoc(postRef, { validationsNo: arrayRemove(uid) });
             } else {
@@ -231,7 +246,7 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
         const votedNo = votesNo.includes(user?.uid);
 
         return (
-          <div key={post.id} className="bg-gray-900 p-4 md:p-5 rounded-xl shadow-lg border border-gray-800 transition hover:border-gray-700">
+          <div key={post.id} className="bg-gray-900 p-4 md:p-5 rounded-xl shadow-lg border border-gray-800 transition hover:border-gray-700 relative">
             
             {/* CABECERA */}
             <div className="flex justify-between items-start mb-3">
@@ -259,18 +274,33 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
                     </div>
                 </div>
 
-                {!isMe && user && (
-                    <button 
-                        onClick={() => handleFollow(post.userId)}
-                        className={`text-xs font-bold px-3 py-1 rounded-full border transition
-                            ${isFollowing 
-                                ? "bg-transparent border-gray-600 text-gray-400 hover:text-red-400 hover:border-red-400" 
-                                : "bg-cyan-600 border-cyan-600 text-white hover:bg-cyan-500"}
-                        `}
-                    >
-                        {isFollowing ? "Siguiendo" : "Seguir"}
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {/* BOTÓN DE BORRADO PARA ADMIN */}
+                    {isAdmin && (
+                        <button 
+                            onClick={() => handleDeletePost(post.id)}
+                            className="text-gray-500 hover:text-red-500 hover:bg-red-900/20 p-2 rounded-full transition"
+                            title="Eliminar Post (Admin)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                        </button>
+                    )}
+
+                    {!isMe && user && (
+                        <button 
+                            onClick={() => handleFollow(post.userId)}
+                            className={`text-xs font-bold px-3 py-1 rounded-full border transition
+                                ${isFollowing 
+                                    ? "bg-transparent border-gray-600 text-gray-400 hover:text-red-400 hover:border-red-400" 
+                                    : "bg-cyan-600 border-cyan-600 text-white hover:bg-cyan-500"}
+                            `}
+                        >
+                            {isFollowing ? "Siguiendo" : "Seguir"}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* CONTENIDO DEL POST */}
@@ -282,6 +312,18 @@ export default function PostList({ user, filterUserId = null, mode = "general", 
                 {post.prediction}
               </p>
 
+              {/* IMAGEN DEL TICKET (NUEVO) */}
+              {post.imageUrl && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-800 relative group cursor-pointer">
+                      <img 
+                        src={post.imageUrl} 
+                        alt="Ticket" 
+                        className="w-full max-h-96 object-cover" 
+                        loading="lazy"
+                      />
+                  </div>
+              )}
+              
               {/* TICKET DE APUESTA */}
               {post.betCode && (
                 <div className="flex items-center justify-between bg-gray-950/50 p-3 rounded-lg border border-gray-800 mt-3 hover:border-gray-700 transition">

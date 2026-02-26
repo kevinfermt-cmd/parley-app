@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SocialBet</string>
+    <string name="title_activity_main">SocialBet</string>
+    <string name="package_name">com.socialbet.app</string>
+    <string name="custom_url_scheme">com.socialbet.app</string>
+</resources>

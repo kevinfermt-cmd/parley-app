@@ -1,4 +1,4 @@
-// app/page.js
+// app/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { auth } from "../src/lib/firebase";
@@ -15,7 +15,9 @@ import BottomNav from "../src/components/BottomNav";
 import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  const [user, setUser] = useState(null); 
+  // AQUÍ ESTÁ LA MAGIA: Le decimos a TypeScript que acepte <any>
+  const [user, setUser] = useState<any>(null); 
+  
   const [activeTab, setActiveTab] = useState("feed"); 
   const [feedFilter, setFeedFilter] = useState("general"); 
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
@@ -23,8 +25,8 @@ export default function Home() {
   // ESTADO PARA EL MENÚ LATERAL (DRAWER)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // LA SOLUCIÓN AL ERROR DE VERCEL AQUÍ (Uso de ?.)
-  const isAdmin = user?.email === "kevinfer.mt@gmail.com"; 
+  // Tu acceso maestro
+  const isAdmin = user && user.email === "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -160,8 +162,8 @@ export default function Home() {
       {/* ================= CONTENEDOR INTELIGENTE ================= */}
       <div className={`mx-auto p-4 transition-all duration-500 ease-in-out ${
           activeTab === "live" 
-            ? "max-w-[1800px] w-full md:px-8" // Pantalla completa para TV
-            : "max-w-2xl" // Estrecho para el Feed
+            ? "max-w-[1800px] w-full md:px-8" 
+            : "max-w-2xl" 
       }`}>
         
         {/* ================= SECCIÓN: MURO (FEED) ================= */}

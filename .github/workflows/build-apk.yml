@@ -1,6 +1,5 @@
 name: Build Android APK
 
-# Esto hace que se ejecute cada vez que haces un "push" a la rama main
 on:
   push:
     branches:
@@ -26,16 +25,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 📦 Instalar Dependencias (NPM)
-        run: npm install
-
-      - name: 🏗️ Construir Next.js (Exportación Estática)
-        run: npm run build
+      - name: 📦 Instalar Dependencias
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: 🔄 Sincronizar Capacitor con Android
         run: npx cap sync android
 
-      - name: 🛠️ Compilar APK en Android Studio (Modo Debug)
+      - name: 🛠️ Compilar APK en Android Studio
         working-directory: ./android
         run: |
           chmod +x ./gradlew

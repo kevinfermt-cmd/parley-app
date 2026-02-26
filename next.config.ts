@@ -1,12 +1,9 @@
-/** @type {import('next').NextConfig} */
+// next.config.ts (o .js)
 const nextConfig = {
-  output: 'export', // ESTO ES LO MÁS IMPORTANTE
-  eslint: {
-    ignoreDuringBuilds: true, // Para que no falle por warnings
-  },
+  // ELIMINAMOS output: 'export' para que Vercel sea feliz
   images: {
-    unoptimized: true, // Obligatorio para exportación estática
+    unoptimized: true,
   }
 };
 
-module.exports = nextConfig;
+export default nextConfig; // (o module.exports = nextConfig;)

@@ -23,8 +23,8 @@ export default function Home() {
   // ESTADO PARA EL MENÚ LATERAL (DRAWER)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Tu acceso maestro
-  const isAdmin = user && user.email === "kevinfer.mt@gmail.com"; 
+  // LA SOLUCIÓN AL ERROR DE VERCEL AQUÍ (Uso de ?.)
+  const isAdmin = user?.email === "kevinfer.mt@gmail.com"; 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -158,7 +158,6 @@ export default function Home() {
       )}
 
       {/* ================= CONTENEDOR INTELIGENTE ================= */}
-      {/* Aquí ocurre la magia: Cambia su ancho máximo dependiendo de la pestaña activa */}
       <div className={`mx-auto p-4 transition-all duration-500 ease-in-out ${
           activeTab === "live" 
             ? "max-w-[1800px] w-full md:px-8" // Pantalla completa para TV

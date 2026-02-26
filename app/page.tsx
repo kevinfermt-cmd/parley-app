@@ -15,7 +15,7 @@ import BottomNav from "../src/components/BottomNav";
 import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState(null); 
   const [activeTab, setActiveTab] = useState("feed"); 
   const [feedFilter, setFeedFilter] = useState("general"); 
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
@@ -46,7 +46,6 @@ export default function Home() {
   };
 
   return (
-    // CORRECCIÓN 1: Quité 'overflow-x-hidden' para que funcione el Sticky
     <main className="min-h-screen bg-gray-950 text-gray-200 font-sans pb-24">
       
       {/* ================= NAVBAR SUPERIOR (STICKY FUNCIONANDO) ================= */}
@@ -75,16 +74,13 @@ export default function Home() {
       {/* ================= MENÚ LATERAL DESLIZANTE (DRAWER) ================= */}
       {isMenuOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
-              {/* Fondo Oscuro (Click para cerrar) */}
               <div 
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
                 onClick={() => setIsMenuOpen(false)}
               ></div>
 
-              {/* Panel del Menú */}
               <div className="relative w-4/5 max-w-sm bg-gray-900 h-full shadow-2xl border-l border-gray-800 flex flex-col animate-in slide-in-from-right duration-300">
                   
-                  {/* Botón Cerrar X */}
                   <div className="p-4 flex justify-end">
                       <button 
                         onClick={() => setIsMenuOpen(false)}
@@ -96,33 +92,29 @@ export default function Home() {
                       </button>
                   </div>
 
-                  {/* CORRECCIÓN 2: Todo el contenido (incluido Logout) está DENTRO del scroll */}
                   <div className="flex-1 overflow-y-auto px-6 pb-10 space-y-6">
                       
-                      {/* Info del Usuario */}
                       {user && (
                           <div className="flex flex-col items-center mb-6">
                               <img src={user.photoURL} className="w-20 h-20 rounded-full border-4 border-gray-800 shadow-lg mb-3" />
                               <h2 className="font-bold text-xl text-white text-center">{user.displayName}</h2>
                               <p className="text-cyan-500 text-sm font-bold bg-cyan-900/30 px-3 py-1 rounded-full mt-1 border border-cyan-800">
-                                 Miembro
+                                 Miembro de la Hinchada
                               </p>
                           </div>
                       )}
 
-                      {/* 1. SECCIÓN INFORMATIVA */}
                       <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
                           <h3 className="font-bold text-gray-300 mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
                               ℹ️ Sobre SocialBet
                           </h3>
                           <p className="text-xs text-gray-400 leading-relaxed">
-                              "Red Social" de la comunidad para la comunidad. Comparte lineas de apuestas del Día.
-                              El contenido audiovisual es recopilado de internet, NO está alojado en Socialbet, gracias.  
+                              Somos la primera red social dedicada exclusivamente a pronósticos deportivos. 
+                              Conecta con tipsters, valida tus jugadas y sube en el ranking mundial.
                           </p>
                           <p className="text-[10px] text-gray-500 mt-2 font-mono">v1.0.2 Beta</p>
                       </div>
 
-                      {/* 2. SECCIÓN DONAR */}
                       <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 p-4 rounded-xl border border-cyan-700/50 shadow-lg">
                           <h3 className="font-bold text-white mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
                               ☕ Apoya el Proyecto
@@ -131,7 +123,7 @@ export default function Home() {
                               Este sitio se mantiene gracias a desarrolladores independientes. Si te gusta la herramienta, invítanos un café.
                           </p>
                           <a 
-                            href="https://paypal.me/Doath" 
+                            href="https://paypal.me/TU_USUARIO_AQUI" 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="block w-full bg-white text-cyan-900 font-bold text-center py-2.5 rounded-lg text-sm hover:bg-gray-200 transition shadow-md"
@@ -140,7 +132,6 @@ export default function Home() {
                           </a>
                       </div>
 
-                      {/* 3. BOTÓN CERRAR SESIÓN (Ahora dentro del scroll) */}
                       <div className="pt-4">
                           <button 
                             onClick={handleLogout}
@@ -153,10 +144,8 @@ export default function Home() {
                           </button>
                       </div>
                       
-                      {/* Espacio extra abajo para que no choque */}
                       <div className="h-10"></div>
                   </div>
-
               </div>
           </div>
       )}
@@ -168,12 +157,17 @@ export default function Home() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto p-4">
+      {/* ================= CONTENEDOR INTELIGENTE ================= */}
+      {/* Aquí ocurre la magia: Cambia su ancho máximo dependiendo de la pestaña activa */}
+      <div className={`mx-auto p-4 transition-all duration-500 ease-in-out ${
+          activeTab === "live" 
+            ? "max-w-[1800px] w-full md:px-8" // Pantalla completa para TV
+            : "max-w-2xl" // Estrecho para el Feed
+      }`}>
         
         {/* ================= SECCIÓN: MURO (FEED) ================= */}
         <div className={activeTab === "feed" ? "block" : "hidden"}>
             
-            {/* Formulario de Postear */}
             {user ? (
               <CreatePost user={user} />
             ) : (
@@ -184,7 +178,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* SUB-MENU DE FILTROS (STICKY FUNCIONANDO Z-30) */}
             {user && (
                 <div className="flex gap-6 mb-6 px-2 border-b border-gray-900 sticky top-16 z-30 bg-gray-950/95 backdrop-blur-sm pt-2 transition-all">
                     <button 
@@ -208,7 +201,6 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Lista de Posts */}
             <div className="space-y-4">
                 {user ? (
                     <>

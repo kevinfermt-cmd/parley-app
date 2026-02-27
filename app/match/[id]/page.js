@@ -4,17 +4,38 @@ import { useState, useEffect, useRef } from "react";
 import { db, auth } from "../../../src/lib/firebase"; 
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import ChatRoom from "../../../src/components/ChatRoom";
+import { App } from '@capacitor/app'; // PLUGIN PARA EL BOTÓN ATRÁS
 
 export default function MatchPage() {
   const { id } = useParams();
+  const router = useRouter();
   const [match, setMatch] = useState(null);
   const [user, setUser] = useState(null);
   
   const videoContainerRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // MANEJO INTELIGENTE DEL BOTÓN ATRÁS (TV/ANDROID)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.Capacitor?.isNativePlatform()) return;
+
+    const backButtonListener = App.addListener('backButton', ({ canGoBack }) => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen(); // Si está en fullscreen, solo lo quita
+        } else if (canGoBack) {
+            router.back(); // Si no, vuelve a la página anterior
+        } else {
+            App.exitApp();
+        }
+    });
+
+    return () => {
+        backButtonListener.then(listener => listener.remove());
+    };
+  }, [router]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
@@ -31,19 +52,16 @@ export default function MatchPage() {
     fetchMatch();
   }, [id]);
 
-  // ESCUDO ANTI POP-UPS (SOLO PARA LA APP ANDROID)
+  // ESCUDO ANTI POP-UPS (APP)
   useEffect(() => {
-    // Verificamos si estamos corriendo dentro del APK (Capacitor)
     if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform()) {
-        // Aniquilamos la función nativa que usan los anuncios para abrir pestañas
         window.open = function() {
-            console.log("Pop-up publicitario bloqueado por el escudo de la App 🛡️");
+            console.log("Pop-up bloqueado 🛡️");
             return null;
         };
     }
   }, []);
   
-
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
         if (videoContainerRef.current?.requestFullscreen) {
@@ -76,16 +94,15 @@ export default function MatchPage() {
   const isChannel = match.type === "channel";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 pb-20">
+    <div className="bg-gray-950 text-gray-100 flex flex-col h-screen w-full overflow-hidden">
       
       {/* --- NAVBAR SUPERIOR --- */}
-      <div className="bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-4 py-3 sticky top-0 z-40 flex items-center gap-4 shadow-xl">
-        <Link href="/" className="text-gray-400 hover:text-cyan-400 bg-gray-800/50 p-2 rounded-xl transition-all flex items-center gap-2 group">
+      <div className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 px-4 py-2 shrink-0 z-40 flex items-center gap-4 shadow-xl">
+        <button onClick={() => router.back()} className="text-gray-400 hover:text-cyan-400 bg-gray-800/50 p-2 rounded-xl transition-all flex items-center gap-2 group">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 group-hover:-translate-x-1 transition-transform">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            <span className="text-xs font-bold hidden md:inline">Volver al Inicio</span>
-        </Link>
+        </button>
         
         <div className="flex-1 min-w-0 flex items-center justify-between">
             <div>
@@ -114,44 +131,39 @@ export default function MatchPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                 </svg>
-                Modo TV
+                Modo Cine
             </button>
         </div>
       </div>
 
-      <div className="max-w-[1920px] mx-auto flex flex-col xl:flex-row h-auto xl:h-[calc(100vh-65px)]">
+      {/* --- GRID PRINCIPAL (No permite scroll global) --- */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 w-full">
           
-          {/* 🎥 REPRODUCTOR DE VIDEO */}
-          <div className="w-full xl:w-[75%] bg-black relative flex flex-col justify-center border-b xl:border-b-0 xl:border-r border-gray-800 z-10">
+          {/* 🎥 REPRODUCTOR DE VIDEO (75% en PC, 100% en móvil) */}
+          <div className="w-full lg:w-[70%] xl:w-[75%] bg-black relative flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-gray-800 z-10">
             
-            <div ref={videoContainerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'aspect-video xl:h-full'}`}>
+            <div ref={videoContainerRef} className={`relative w-full h-full bg-black flex items-center justify-center group/video ${isFullscreen ? '' : 'aspect-video lg:aspect-auto'}`}>
                 {match.videoUrl ? (
                     <iframe 
                         src={match.videoUrl} 
-                        className="w-full h-full absolute inset-0" 
+                        className="w-full h-full absolute inset-0 focus:outline-none" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                         allowFullScreen
                     ></iframe>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-3">
-                        <div className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 md:w-24 md:h-24 opacity-20">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                            </svg>
-                            <span className="absolute inset-0 flex items-center justify-center text-cyan-500 animate-ping text-xl md:text-3xl">📡</span>
-                        </div>
-                        <p className="text-xs md:text-sm font-black uppercase tracking-widest text-gray-500">Esperando señal de origen...</p>
+                        <span className="text-cyan-500 animate-ping text-3xl">📡</span>
+                        <p className="text-sm font-black uppercase tracking-widest text-gray-500">Esperando señal...</p>
                     </div>
                 )}
                 
                 {match.videoUrl && !isFullscreen && (
                     <button 
                         onClick={toggleFullScreen}
-                        className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/90 border border-gray-600/50 text-white p-2.5 rounded-lg backdrop-blur-md opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center gap-2 group"
+                        className="absolute bottom-6 right-6 bg-black/70 hover:bg-cyan-600 border border-gray-500 text-white p-3 rounded-full backdrop-blur-md opacity-0 group-hover/video:opacity-100 transition-all z-20 flex items-center gap-2"
                         title="Pantalla Completa"
                     >
-                        <span className="text-xs font-bold text-gray-300 group-hover:text-white hidden md:block px-1">Expandir</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-cyan-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                         </svg>
                     </button>
@@ -159,49 +171,37 @@ export default function MatchPage() {
             </div>
           </div>
 
-          {/* --- PANEL LATERAL / INFERIOR --- */}
-          <div className="w-full xl:w-[25%] flex flex-col bg-gray-950 overflow-hidden h-full">
+          {/* --- PANEL LATERAL / INFERIOR (25% en PC) --- */}
+          <div className="w-full lg:w-[30%] xl:w-[25%] flex flex-col bg-gray-950 overflow-hidden shrink-0 lg:shrink">
               
-              <div className="p-4 md:p-6 shrink-0 border-b border-gray-900 bg-gray-950 z-20 shadow-sm">
+              <div className="p-4 shrink-0 border-b border-gray-900 bg-gray-950 z-20">
                   {isChannel ? (
-                      <div className="bg-gradient-to-br from-gray-900 to-black p-6 rounded-2xl shadow-lg border border-gray-800 text-center relative overflow-hidden">
+                      <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-xl shadow-md border border-gray-800 text-center relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[50px] rounded-full"></div>
-                          <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-1">Viendo Canal</p>
-                          <h4 className="font-black text-cyan-400 text-2xl md:text-3xl italic uppercase leading-tight">{match.channelName}</h4>
+                          <h4 className="font-black text-cyan-400 text-xl italic uppercase leading-tight relative z-10">{match.channelName}</h4>
                       </div>
                   ) : (
-                      <div className="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-lg border border-gray-800 flex justify-between items-center relative overflow-hidden">
+                      <div className="bg-gray-900 p-3 rounded-xl shadow-md border border-gray-800 flex justify-between items-center relative overflow-hidden">
                           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"></div>
                           
                           <div className="flex-1 text-center">
-                              <h4 className="font-black text-white text-sm md:text-lg uppercase leading-tight line-clamp-2">{match.homeTeam}</h4>
-                              <span className="text-[9px] md:text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-1 block">Local</span>
+                              <h4 className="font-black text-white text-sm uppercase leading-tight line-clamp-2">{match.homeTeam}</h4>
                           </div>
 
-                          <div className="flex flex-col items-center px-2 md:px-4">
-                              <div className="bg-gray-950 px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-gray-800 font-black text-cyan-400 text-sm md:text-lg italic shadow-inner">
-                                  VS
-                              </div>
+                          <div className="flex flex-col items-center px-2">
+                              <div className="bg-gray-950 px-3 py-1 rounded-lg border border-gray-800 font-black text-cyan-400 text-xs italic shadow-inner">VS</div>
                           </div>
 
                           <div className="flex-1 text-center">
-                              <h4 className="font-black text-white text-sm md:text-lg uppercase leading-tight line-clamp-2">{match.awayTeam}</h4>
-                              <span className="text-[9px] md:text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-1 block">Visita</span>
+                              <h4 className="font-black text-white text-sm uppercase leading-tight line-clamp-2">{match.awayTeam}</h4>
                           </div>
                       </div>
                   )}
-                  
-                  <div className="hidden md:flex mt-4 bg-gradient-to-br from-cyan-900/10 to-gray-900 p-4 rounded-2xl border border-cyan-900/30 items-center gap-3">
-                      <span className="text-xl drop-shadow-md">🔥</span>
-                      <p className="text-cyan-100/90 text-[11px] font-bold leading-relaxed">
-                          ¿Ves un ganador claro? <br/>
-                          <span className="text-gray-500 font-medium">Comenta tu análisis en el chat y ayuda a la comunidad.</span>
-                      </p>
-                  </div>
               </div>
 
-              <div className="flex-1 min-h-[400px] xl:min-h-0 bg-gray-950 relative">
-                  <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-4">
+              {/* Chat Container (Aislado para que solo haga scroll aquí adentro) */}
+              <div className="flex-1 relative bg-gray-950 min-h-[300px] lg:min-h-0">
+                  <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-2 md:p-4">
                       <ChatRoom matchId={id} user={user} />
                   </div>
               </div>
@@ -209,20 +209,15 @@ export default function MatchPage() {
           </div>
       </div>
       
+      {/* 🛑 BLOQUEO GLOBAL DEL SCROLL EN ESTA PANTALLA */}
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+        body {
+            overflow: hidden !important;
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #030712; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #1f2937; 
-          border-radius: 10px;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background-color: #374151; 
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #030712; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #1f2937; border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #374151; }
       `}</style>
     </div>
   );

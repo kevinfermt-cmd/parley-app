@@ -31,6 +31,19 @@ export default function MatchPage() {
     fetchMatch();
   }, [id]);
 
+  // ESCUDO ANTI POP-UPS (SOLO PARA LA APP ANDROID)
+  useEffect(() => {
+    // Verificamos si estamos corriendo dentro del APK (Capacitor)
+    if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform()) {
+        // Aniquilamos la función nativa que usan los anuncios para abrir pestañas
+        window.open = function() {
+            console.log("Pop-up publicitario bloqueado por el escudo de la App 🛡️");
+            return null;
+        };
+    }
+  }, []);
+  
+
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
         if (videoContainerRef.current?.requestFullscreen) {
@@ -117,7 +130,6 @@ export default function MatchPage() {
                         src={match.videoUrl} 
                         className="w-full h-full absolute inset-0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                        sandbox="allow-scripts allow-same-origin allow-presentation" /* <--- LA PRISIÓN ANTI POP-UPS */
                         allowFullScreen
                     ></iframe>
                 ) : (

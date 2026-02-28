@@ -11,15 +11,16 @@ export default function AdminMatchForm() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
 
-  // NUEVO: Agregamos 'type' (match o channel) y 'channelName'
+  // NUEVO: Agregamos 'widgetUrl' al estado inicial
   const [matchData, setMatchData] = useState({
-    type: "match", // Por defecto es partido
+    type: "match", 
     league: "", 
     homeTeam: "", 
     awayTeam: "", 
     channelName: "", 
     time: "", 
     videoUrl: "", 
+    widgetUrl: "", // <--- Campo para el widget de estadísticas
     category: "Principales"
   });
 
@@ -49,12 +50,13 @@ export default function AdminMatchForm() {
   const selectMatch = (match) => {
     setMatchData({
         ...matchData,
-        type: "match", // Si importas de API, obvio es un partido
+        type: "match", 
         league: match.league.name,
         homeTeam: match.teams.home.name,
         awayTeam: match.teams.away.name,
         time: match.time || "HOY",
-        videoUrl: ""
+        videoUrl: "",
+        widgetUrl: "" // <--- Reseteamos el widget al importar
     });
     setSearchResults([]);
     setSearchQuery("");
@@ -90,8 +92,9 @@ export default function AdminMatchForm() {
           payload.league = matchData.league;
           payload.homeTeam = matchData.homeTeam;
           payload.awayTeam = matchData.awayTeam;
+          payload.widgetUrl = matchData.widgetUrl; // <--- Se guarda en Firebase
       } else {
-          payload.league = matchData.league || "TV"; // Opcional para canales
+          payload.league = matchData.league || "TV"; 
           payload.channelName = matchData.channelName;
       }
 
@@ -109,7 +112,7 @@ export default function AdminMatchForm() {
       // Resetear pero mantener tipo y categoría para más velocidad si subes varios
       setMatchData({ 
           ...matchData, 
-          league: "", homeTeam: "", awayTeam: "", channelName: "", time: "", videoUrl: "" 
+          league: "", homeTeam: "", awayTeam: "", channelName: "", time: "", videoUrl: "", widgetUrl: "" 
       });
       
     } catch (error) {
@@ -234,6 +237,19 @@ export default function AdminMatchForm() {
                             className="w-full bg-gray-950 p-2.5 border border-cyan-900/50 rounded-lg text-sm text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500 placeholder-cyan-900" 
                         />
                     </div>
+
+                    {/* NUEVO: Campo de Widget (Solo para Partidos) */}
+                    {matchData.type === "match" && (
+                        <div className="bg-gray-950/50 p-4 border border-gray-800 rounded-xl mt-2">
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Link del Widget de Estadísticas (Opcional)</p>
+                            <input 
+                                value={matchData.widgetUrl} 
+                                onChange={e => setMatchData({...matchData, widgetUrl: e.target.value})} 
+                                placeholder="https://widgets.sofascore.com/..." 
+                                className="w-full bg-gray-900 p-2.5 border border-gray-800 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-cyan-500 transition-colors placeholder-gray-700" 
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <button 

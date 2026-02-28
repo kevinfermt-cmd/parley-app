@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Stats</title>
+    <style>
+        /* Adaptamos el diseño para que parezca nativo de SocialBet */
+        body { margin: 0; padding: 0; background-color: #030712; color: #f3f4f6; font-family: sans-serif; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background-color: #1f2937; border-radius: 10px; }
+        .scoreaxis-widget { height: 100vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div id="widget-cb9qmm5qiaio" class="scoreaxis-widget" style="width: 100%; background-color: #030712; color: #f3f4f6;">
+        <div style="padding: 40px 20px; text-align: center; color: #4b5563; font-family: sans-serif;">
+            <div style="font-size: 30px; margin-bottom: 10px;">🛡️</div>
+            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                Si las estadísticas no cargan, desactiva el escudo de tu navegador (Brave/AdBlock).
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Leemos el ID del partido desde la URL que le mande Next.js
+        const params = new URLSearchParams(window.location.search);
+        const matchId = params.get('id') || '66717b45759a56977004a930';
+        
+        // Inyectamos el script de forma nativa
+        const script = document.createElement('script');
+        script.src = `https://widgets.scoreaxis.com/api/football/live-match/${matchId}?widgetId=cb9qmm5qiaio&lang=es&lineupsBlock=1&eventsBlock=1&statsBlock=1&links=0&font=sans-serif&fontSize=14&rowDensity=100&widgetWidth=auto&widgetHeight=auto&bodyColor=%23030712&textColor=%23f3f4f6&linkColor=%2322d3ee&borderColor=%231f2937&tabColor=%23111827`;
+        script.async = true;
+        
+        document.getElementById('widget-cb9qmm5qiaio').appendChild(script);
+    </script>
+</body>
+</html>

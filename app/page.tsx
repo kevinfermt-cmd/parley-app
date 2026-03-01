@@ -6,21 +6,12 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 
 // Componentes Core
 import AuthButton from "../src/components/AuthButton";
-import CreatePost from "../src/components/CreatePost";
-import PostList from "../src/components/PostList";
 import LiveSection from "../src/components/LiveSection"; 
-import Explore from "../src/components/Explore"; 
 import AdminMatchForm from "../src/components/AdminMatchForm";
-import BottomNav from "../src/components/BottomNav"; 
-import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
 export default function Home() {
-  // AQUÍ ESTÁ LA MAGIA: Le decimos a TypeScript que acepte <any>
+  // Le decimos a TypeScript que acepte <any> para evitar el error de tipado del usuario
   const [user, setUser] = useState<any>(null); 
-  
-  const [activeTab, setActiveTab] = useState("feed"); 
-  const [feedFilter, setFeedFilter] = useState("general"); 
-  const [refreshTrigger, setRefreshTrigger] = useState(0); 
   
   // ESTADO PARA EL MENÚ LATERAL (DRAWER)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,10 +26,6 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  const handleSmartRefresh = () => {
-      setRefreshTrigger(prev => prev + 1);
-  };
-
   const handleLogout = async () => {
       if(confirm("¿Seguro que quieres cerrar sesión?")) {
         await signOut(auth);
@@ -50,7 +37,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-950 text-gray-200 font-sans pb-24">
       
-      {/* ================= NAVBAR SUPERIOR (STICKY FUNCIONANDO) ================= */}
+      {/* ================= NAVBAR SUPERIOR ================= */}
       <nav className="flex justify-between items-center bg-gray-900/90 backdrop-blur-md p-4 sticky top-0 z-40 border-b border-gray-800 shadow-md h-16">
         <h1 className="text-xl font-black text-white tracking-tighter italic">
             Social<span className="text-cyan-400">Bet</span>
@@ -114,7 +101,7 @@ export default function Home() {
                               Somos la primera red social dedicada exclusivamente a pronósticos deportivos. 
                               Conecta con tipsters, valida tus jugadas y sube en el ranking mundial.
                           </p>
-                          <p className="text-[10px] text-gray-500 mt-2 font-mono">v1.0.2 Beta</p>
+                          <p className="text-[10px] text-gray-500 mt-2 font-mono">v1.0.2 Beta (Modo Pruebas TV)</p>
                       </div>
 
                       <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 p-4 rounded-xl border border-cyan-700/50 shadow-lg">
@@ -159,94 +146,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* ================= CONTENEDOR INTELIGENTE ================= */}
-      <div className={`mx-auto p-4 transition-all duration-500 ease-in-out ${
-          activeTab === "live" 
-            ? "max-w-[1800px] w-full md:px-8" 
-            : "max-w-2xl" 
-      }`}>
-        
-        {/* ================= SECCIÓN: MURO (FEED) ================= */}
-        <div className={activeTab === "feed" ? "block" : "hidden"}>
-            
-            {user ? (
-              <CreatePost user={user} />
-            ) : (
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 text-white p-6 rounded-2xl text-center mb-8 shadow-xl mx-2 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-[60px]"></div>
-                <h2 className="text-2xl font-black mb-2 relative z-10 italic">¡ÚNETE A LA ÉLITE!</h2>
-                <p className="text-gray-400 text-sm relative z-10">Mira los parleys de los mejores tipsters en tiempo real.</p>
-              </div>
-            )}
-
-            {user && (
-                <div className="flex gap-6 mb-6 px-2 border-b border-gray-900 sticky top-16 z-30 bg-gray-950/95 backdrop-blur-sm pt-2 transition-all">
-                    <button 
-                        onClick={() => setFeedFilter("general")} 
-                        className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "general" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}
-                    >
-                        Para ti
-                    </button>
-                    <button 
-                        onClick={() => setFeedFilter("following")} 
-                        className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "following" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}
-                    >
-                        Siguiendo
-                    </button>
-                    <button 
-                        onClick={() => setFeedFilter("trending")} 
-                        className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "trending" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}
-                    >
-                        Tendencias 🔥
-                    </button>
-                </div>
-            )}
-
-            <div className="space-y-4">
-                {user ? (
-                    <>
-                        <div className={feedFilter === "general" ? "block animate-in fade-in slide-in-from-bottom-4" : "hidden"}>
-                            <PostList user={user} mode="general" refreshTrigger={refreshTrigger} />
-                        </div>
-                        <div className={feedFilter === "following" ? "block animate-in fade-in slide-in-from-bottom-4" : "hidden"}>
-                            <PostList user={user} mode="following" refreshTrigger={refreshTrigger} />
-                        </div>
-                        <div className={feedFilter === "trending" ? "block animate-in fade-in slide-in-from-bottom-4" : "hidden"}>
-                            <PostList user={user} mode="trending" refreshTrigger={refreshTrigger} />
-                        </div>
-                    </>
-                ) : (
-                    <div className="bg-gray-900/50 p-16 rounded-3xl text-center border border-gray-800 border-dashed">
-                        <span className="text-5xl block mb-4 opacity-20 grayscale">🏆</span>
-                        <p className="text-gray-500 font-bold uppercase tracking-tighter">Inicia sesión para desbloquear el feed</p>
-                    </div>
-                )}
-            </div>
-        </div>
-
-        {/* ================= SECCIÓN: EXPLORAR & RANKING ================= */}
-        <div className={activeTab === "explore" ? "block animate-in fade-in duration-300" : "hidden"}>
-            <Explore />
-        </div>
-        
-        {/* ================= SECCIÓN: EN VIVO (MATCHES) ================= */}
-        <div className={activeTab === "live" ? "block animate-in fade-in zoom-in duration-300" : "hidden"}>
-            <LiveSection />
-        </div>
-
+      {/* ================= SECCIÓN: EN VIVO (Única sección activa) ================= */}
+      <div className="mx-auto p-4 transition-all duration-500 ease-in-out max-w-[1800px] w-full md:px-8">
+          <div className="block animate-in fade-in zoom-in duration-300">
+              <LiveSection />
+          </div>
       </div>
-
-      {/* --- ELEMENTOS FLOTANTES --- */}
-      {activeTab === "feed" && user && (
-          <SmartFloatingButton onRefresh={handleSmartRefresh} />
-      )}
-
-      {/* --- NAVEGACIÓN INFERIOR --- */}
-      <BottomNav 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        user={user} 
-      />
 
     </main>
   );

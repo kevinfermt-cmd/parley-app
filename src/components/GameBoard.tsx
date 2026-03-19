@@ -335,7 +335,7 @@ export default function GameBoard({ socket, room, myTeam, opponentName }: GameBo
         <div className="absolute bottom-0 left-[250px] w-2 h-2 bg-white rounded-full z-10 transform -translate-x-1/2 translate-y-1/2"></div>
 
         {aimingPuckId && activePuckState && aimDistance > 5 && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" style={{ opacity }}>
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" style={{ opacity: Math.min(1, aimDistance / 100) }}>
             <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(255, 255, 255, 1)" /></marker></defs>
             <line x1={renderX(activePuckState.x)} y1={renderY(activePuckState.y)} x2={renderX(activePuckState.x) + aimDx} y2={renderY(activePuckState.y) + aimDy} stroke="rgba(255, 255, 255, 1)" strokeWidth="5" strokeDasharray="10 5" strokeLinecap="round" markerEnd="url(#arrowhead)" />
           </svg>

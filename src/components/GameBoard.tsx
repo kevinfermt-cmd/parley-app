@@ -265,7 +265,7 @@ export default function GameBoard({ socket, room, myTeam, opponentName }: GameBo
       let vx = aimDx * 0.18; let vy = aimDy * 0.18;
       if (myTeam === 'rival') { vx = -vx; vy = -vy; } // Invertimos input táctil
       
-      const activePuck = pucksPhys.current.find(p => p.id === aimingPuckId);
+      const activePuck = pucksPhys.current.find((p: any) => p.id === aimingPuckId);
       if (activePuck) {
         activePuck.vx = vx; activePuck.vy = vy;
         justShot.current = true;

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { auth, db } from "../src/lib/firebase"; 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { Home, Gamepad2, Users, Search, Shield, Flame } from "lucide-react";
+import { Home, BookImage, Users, Search, Shield, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // Componentes Core de SocialBet
@@ -15,8 +15,8 @@ import Explore from "../src/components/Explore";
 import AdminMatchForm from "../src/components/AdminMatchForm";
 import SmartFloatingButton from "../src/components/SmartFloatingButton"; 
 
-// Componentes de Pro Duels
-import MatchTab from "../src/components/MatchTab";
+// Componentes de Pro Duels (Colección)
+import AlbumSection from "../src/components/AlbumSection";
 
 export default function AppShell() {
   const router = useRouter();
@@ -194,9 +194,13 @@ export default function AppShell() {
                   <div className="flex-1 overflow-y-auto px-6 pb-10 space-y-6">
                       {profile && (
                           <div className="flex flex-col items-center mb-6">
-                              <img src={profile.photoURL} className="w-20 h-20 rounded-full border-4 border-gray-800 shadow-lg mb-3" />
-                              <h2 className="font-bold text-xl text-white text-center">{profile.clubName}</h2>
-                              <p className="text-cyan-500 text-sm font-bold bg-cyan-900/30 px-3 py-1 rounded-full mt-1 border border-cyan-800">{profile.username}</p>
+                              <img src={profile.photoURL} className="w-20 h-20 rounded-full border-4 border-gray-800 shadow-lg mb-3 object-cover" />
+                              <h2 className="font-bold text-xl text-white text-center">
+                                {profile.displayName || profile.clubName || profile.username}
+                              </h2>
+                              <p className="text-cyan-500 text-sm font-bold bg-cyan-900/30 px-3 py-1 rounded-full mt-1 border border-cyan-800">
+                                @{profile.username?.replace(/^@/, '')}
+                              </p>
                           </div>
                       )}
 
@@ -218,7 +222,7 @@ export default function AppShell() {
                           <p className="text-xs text-cyan-100 mb-3 leading-relaxed">
                               Este sitio se mantiene gracias a desarrolladores independientes. Si te gusta la herramienta, invítanos un café.
                           </p>
-                          <a href="https://paypal.me/TU_USUARIO_AQUI" target="_blank" rel="noopener noreferrer" className="block w-full bg-white text-cyan-900 font-bold text-center py-2.5 rounded-lg text-sm hover:bg-gray-200 transition shadow-md">
+                          <a href="https://paypal.me/doath" target="_blank" rel="noopener noreferrer" className="block w-full bg-white text-cyan-900 font-bold text-center py-2.5 rounded-lg text-sm hover:bg-gray-200 transition shadow-md">
                               Donar con PayPal
                           </a>
                       </div>
@@ -253,7 +257,7 @@ export default function AppShell() {
                   <p className="text-gray-400 text-sm relative z-10">Mira los parleys de los mejores tipsters en tiempo real.</p>
                 </div>
               )}
-
+              
               {user && (
                   <div className="flex gap-6 mb-6 px-2 border-b border-gray-900 sticky top-0 z-30 bg-gray-950/95 backdrop-blur-sm pt-2 transition-all">
                       <button onClick={() => setFeedFilter("general")} className={`pb-3 text-xs font-black uppercase tracking-widest transition-all ${feedFilter === "general" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-gray-500 hover:text-gray-300"}`}>Para ti</button>
@@ -294,17 +298,11 @@ export default function AppShell() {
               <LiveSection />
           </div>
 
-          {/* --- PESTAÑA 3: JUEGOS (PRO DUELS) --- */}
+          {/* --- PESTAÑA 3: ÁLBUM Y SOBRES --- */}
           <div className={activeTab === "juegos" ? "block animate-in fade-in zoom-in duration-300" : "hidden"}>
-            {!profile ? (
-               <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                 <Gamepad2 className="w-16 h-16 text-cyan-500 mb-4 opacity-50" />
-                 <h2 className="text-2xl font-black text-white mb-2">PRO DUELS SOCCER</h2>
-                 <AuthButton />
-               </div>
-            ) : (
-               <MatchTab profile={profile} />
-            )}
+            <div className="p-4 pt-6">
+              <AlbumSection />
+            </div>
           </div>
 
           {/* --- PESTAÑA 4: EXPLORAR / RANKINGS --- */}
@@ -324,7 +322,7 @@ export default function AppShell() {
       <div className="shrink-0 bg-gray-900 border-t border-gray-800 px-2 sm:px-6 py-3 pb-safe z-40 flex justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
         <NavButton icon={<Users />} label="Social" isActive={activeTab === 'feed'} onClick={() => setActiveTab('feed')} activeColor="text-cyan-400" />
         <NavButton icon={<Home />} label="Directo" isActive={activeTab === 'live'} onClick={() => setActiveTab('live')} activeColor="text-indigo-400" />
-        <NavButton icon={<Gamepad2 />} label="Juegos" isActive={activeTab === 'juegos'} onClick={() => setActiveTab('juegos')} activeColor="text-green-500" />
+        <NavButton icon={<BookImage />} label="Álbum" isActive={activeTab === 'juegos'} onClick={() => setActiveTab('juegos')} activeColor="text-green-500" />
         <NavButton icon={<Search />} label="Explorar" isActive={activeTab === 'explore'} onClick={() => setActiveTab('explore')} activeColor="text-yellow-400" />
         
         {/* Botón Central: Club */}

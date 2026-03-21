@@ -113,7 +113,7 @@ export default function MyAlbum() {
           
           <div className="text-center">
             <h3 className="text-lg md:text-2xl font-black text-white uppercase tracking-widest drop-shadow-md">
-              {currentTeam}
+              {String(currentTeam)}
             </h3>
             <p className="text-[10px] md:text-xs text-cyan-400 font-bold tracking-widest uppercase mt-0.5">
               Cromos: {teamUnlockedCards} / {teamTotalCards}

@@ -62,7 +62,7 @@ export default function MyAlbum() {
   
   // Progreso ESPECÍFICO de la página actual
   const teamTotalCards = displayedCatalog.length;
-  const teamUnlockedCards = displayedCatalog.filter(cat => inventory.some(inv => inv.cardId === cat.id)).length;
+  const teamUnlockedCards = displayedCatalog.filter((cat: any) => inventory.some((inv: any) => inv.cardId === cat.id)).length;
 
   const handleNextPage = () => {
     if (currentPage < TEAMS.length - 1) setCurrentPage(prev => prev + 1);

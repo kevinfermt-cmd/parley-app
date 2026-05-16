@@ -158,21 +158,29 @@ export default function AppShell() {
   return (
     <main className="h-[100dvh] w-full bg-gray-950 text-gray-200 font-sans flex flex-col overflow-hidden relative">
       
-      {/* NAVBAR SUPERIOR FIJO */}
-      <nav className="shrink-0 flex justify-between items-center bg-gray-900/90 backdrop-blur-md p-4 z-40 border-b border-gray-800 shadow-md h-16">
-        <h1 className="text-xl font-black text-white tracking-tighter italic">
-            Social<span className="text-cyan-400">Bet</span>
+            {/* NAVBAR SUPERIOR FIJO - ESTILO LIQUID GLASS */}
+      <nav className="shrink-0 flex justify-between items-center bg-black/20 backdrop-blur-2xl px-5 py-3 z-40 border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.1)] h-16">
+        <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white uppercase">
+            SOCIAL<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 drop-shadow-sm">BET</span>
         </h1>
         <div>
             {!user ? (
                 <AuthButton />
             ) : (
-                <button onClick={() => setIsMenuOpen(true)} className="p-1 rounded-full border-2 border-gray-700 hover:border-cyan-500 transition active:scale-95">
-                    <img src={profile?.photoURL || user.photoURL} alt="Perfil" className="w-8 h-8 rounded-full object-cover" />
+                <button 
+                  onClick={() => setIsMenuOpen(true)} 
+                  className="p-0.5 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 transition-all hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                >
+                    <img 
+                      src={profile?.photoURL || user.photoURL} 
+                      alt="Perfil" 
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-black" 
+                    />
                 </button>
             )}
         </div>
       </nav>
+
 
       {/* MENÚ LATERAL DESLIZANTE */}
       {isMenuOpen && (

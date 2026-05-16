@@ -304,5 +304,17 @@ export default function LiveSection() {
                 </div>
             )}
 
-            {/* CARRUSELES DINÁMICOS REDISEÑADOS */}
-            <CarouselRow title="💎 Principales" items={canalesPrincipales} isAdmin={isAdmin} handleDelete={handleDelete} handleEdit
+                        {/* CARRUSELES DINÁMICOS REDISEÑADOS */}
+            <CarouselRow title="💎 Principales" items={canalesPrincipales} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🇪🇨 Ecuador" items={canalesEcuatorianos} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🌎 Sudamérica" items={canalesSudamerica} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🇨🇴 Colombia" items={canalesColombia} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🇵🇪 Perú" items={canalesPeru} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🇲🇽 México" items={canalesMexico} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+            <CarouselRow title="🌐 Otros Eventos" items={canalesOtros} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
+        </>
+      )}
+    </div>
+  );
+}
+

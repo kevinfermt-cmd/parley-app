@@ -30,7 +30,7 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                 </h3>
             )}
 
-            {/* Flecha Izquierda (Glassmorphism) */}
+            {/* Flecha Izquierda */}
             <button 
                 onClick={() => scroll("left")}
                 className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-30 bg-black/40 backdrop-blur-xl border border-white/10 hover:bg-white/10 text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-all items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.5)] active:scale-95"
@@ -48,13 +48,11 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                 {items.map((match) => (
                     <Link href={`/match/${match.id}`} key={match.id} className="snap-start shrink-0 w-[160px] md:w-[220px] group/card relative block outline-none">
                         
-                        {/* Tarjeta Glassmorphism Premium */}
                         <div className="rounded-3xl bg-gray-900/40 backdrop-blur-md border border-white/5 hover:border-cyan-500/50 transition-all duration-300 h-[150px] flex flex-col relative overflow-hidden shadow-lg hover:shadow-[0_8px_30px_rgba(6,182,212,0.15)]">
                             
-                            {/* Brillo interno suave (Aurora Effect) */}
                             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 via-transparent to-purple-500/0 group-hover/card:from-cyan-500/10 group-hover/card:to-purple-500/10 transition-all duration-500"></div>
 
-                            {/* Admin Tools Cards */}
+                            {/* Admin Tools */}
                             {isAdmin && (
                                 <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity backdrop-blur-md bg-black/50 p-1 rounded-xl border border-white/10">
                                     <button onClick={(e) => handleEditTime(e, match.id, match.time)} className="text-blue-400 hover:text-white p-1 rounded text-xs transition-colors">⏱️</button>
@@ -63,7 +61,7 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                                 </div>
                             )}
 
-                            {/* Indicador de "En Vivo" */}
+                            {/* Indicador En Vivo */}
                             <div className="flex justify-between items-center px-4 pt-4 relative z-10">
                                 <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm border border-white/5 px-2 py-1 rounded-full">
                                     <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]"></span>
@@ -71,16 +69,14 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                                 </div>
                             </div>
                             
-                            {/* Contenido Central: Logo de Canal o Nombres de Equipos */}
+                            {/* Contenido Central */}
                             <div className="flex-1 flex flex-col justify-center items-center text-center relative z-10 w-full px-4 pb-2">
                                 {match.type === "channel" ? (
-                                    /* LÓGICA DE CANAL CON LOGO */
                                     match.channelLogo ? (
                                         <div className="w-16 h-16 md:w-20 md:h-20 relative flex items-center justify-center">
                                             <img src={match.channelLogo} alt={match.channelName} className="max-w-full max-h-full object-contain drop-shadow-xl filter brightness-110 group-hover/card:scale-110 transition-transform duration-500" />
                                         </div>
                                     ) : (
-                                        /* Fallback si el canal aún no tiene logo en BD */
                                         <div className="flex flex-col items-center justify-center gap-1">
                                             <Tv className="w-6 h-6 text-purple-400 mb-1 opacity-80" />
                                             <h4 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 text-sm md:text-lg italic leading-tight w-full truncate">
@@ -89,7 +85,6 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                                         </div>
                                     )
                                 ) : (
-                                    /* LÓGICA DE PARTIDO NORMAL */
                                     <div className="flex flex-col items-center justify-center w-full gap-1">
                                         <h4 className="font-bold text-white text-[11px] md:text-sm leading-tight truncate w-full">{match.homeTeam}</h4>
                                         <span className="text-[8px] font-black italic text-cyan-500/80 bg-cyan-500/10 px-2 py-0.5 rounded-full">VS</span>
@@ -98,14 +93,14 @@ function CarouselRow({ title, items, isAdmin, handleDelete, handleEditTime, hand
                                 )}
                             </div>
 
-                            {/* Barra inferior estética */}
+                            {/* Barra inferior */}
                             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-500 to-purple-600 transform scale-x-0 group-hover/card:scale-x-100 transition-transform duration-500 origin-center"></div>
                         </div>
                     </Link>
                 ))}
             </div>
 
-            {/* Flecha Derecha (Glassmorphism) */}
+            {/* Flecha Derecha */}
             <button 
                 onClick={() => scroll("right")}
                 className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-black/40 backdrop-blur-xl border border-white/10 hover:bg-white/10 text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-all items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.5)] active:scale-95"
@@ -164,10 +159,10 @@ export default function LiveSection() {
   const handleDelete = async (e, id) => {
     e.preventDefault(); 
     e.stopPropagation(); 
-    if (!confirm("¿Seguro quieres BORRAR este partido?")) return;
+    if (!confirm("¿Seguro quieres BORRAR este partido/canal?")) return;
     try {
         await deleteDoc(doc(db, "matches", id));
-        toast.success("Partido eliminado");
+        toast.success("Transmisión eliminada");
     } catch (error) { toast.error("Error al eliminar"); }
   };
 
@@ -197,12 +192,12 @@ export default function LiveSection() {
       }
   };
 
-  // --- FILTROS ---
-  const bannerMatches = matches.filter(m => m.category === "Banner" && m.type !== "channel");
-  const fallbackBanner = matches.filter(m => m.type !== "channel").slice(0, 3);
+  // --- FILTROS (CORREGIDOS PARA QUE EL BANNER ACEPTE CANALES) ---
+  const bannerMatches = matches.filter(m => m.category === "Banner");
+  const fallbackBanner = matches.slice(0, 3); // Si no hay Banner, agarra los 3 primeros en general
   const displayBanner = bannerMatches.length > 0 ? bannerMatches : fallbackBanner;
   
-  const canalesPrincipales = matches.filter(m => m.category === "Principales" || !m.category);
+  const canalesPrincipales = matches.filter(m => m.category === "Principales" || (!m.category && m.category !== "Banner"));
   const canalesEcuatorianos = matches.filter(m => m.category === "Ecuatorianos");
   const canalesSudamerica = matches.filter(m => m.category === "Sudamerica");
   const canalesColombia = matches.filter(m => m.category === "Colombia");
@@ -251,7 +246,7 @@ export default function LiveSection() {
         </div>
       ) : (
         <>
-            {/* 1. SLIDER BANNER PREMIUM */}
+            {/* 1. SLIDER BANNER PREMIUM (AHORA ACEPTA CANALES) */}
             {displayBanner.length > 0 && (
                 <div className="relative w-full group/banner mb-4">
                     {displayBanner.length > 1 && (
@@ -278,7 +273,7 @@ export default function LiveSection() {
                                         </div>
                                     )}
 
-                                    {/* Globos de luz difuminados (Efecto Apple) */}
+                                    {/* Globos de luz */}
                                     <div className="absolute -right-20 -top-20 w-64 h-64 bg-purple-600/20 blur-[100px] rounded-full group-hover:bg-purple-600/30 transition-all duration-700 pointer-events-none"></div>
                                     <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-cyan-600/20 blur-[100px] rounded-full group-hover:bg-cyan-600/30 transition-all duration-700 pointer-events-none"></div>
                                     
@@ -290,12 +285,29 @@ export default function LiveSection() {
                                             </span>
                                             <PlayCircle className="w-8 h-8 text-white/50 group-hover:text-cyan-400 transition-colors duration-500" strokeWidth={1.5} />
                                         </div>
-                                        <div className="flex items-center justify-between gap-4 mt-auto">
-                                            <h4 className="font-black text-white text-xl md:text-4xl flex-1 truncate">{match.homeTeam}</h4>
-                                            <span className="text-gray-500 font-black text-sm md:text-2xl px-2 opacity-50">VS</span>
-                                            <h4 className="font-black text-white text-xl md:text-4xl flex-1 text-right truncate">{match.awayTeam}</h4>
-                                        </div>
-                                        <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mt-3">{match.league}</span>
+                                        
+                                        {/* RENDERIZADO CONDICIONAL DEL BANNER (Partido vs Canal) */}
+                                        {match.type === "channel" ? (
+                                            <div className="flex flex-col items-center justify-center mt-auto mb-auto">
+                                                {match.channelLogo ? (
+                                                    <img src={match.channelLogo} alt={match.channelName} className="h-16 md:h-24 object-contain drop-shadow-2xl filter brightness-110" />
+                                                ) : (
+                                                    <h4 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 text-2xl md:text-5xl italic truncate w-full text-center drop-shadow-lg">
+                                                        {match.channelName}
+                                                    </h4>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-between gap-4 mt-auto">
+                                                <h4 className="font-black text-white text-xl md:text-4xl flex-1 truncate">{match.homeTeam}</h4>
+                                                <span className="text-gray-500 font-black text-sm md:text-2xl px-2 opacity-50">VS</span>
+                                                <h4 className="font-black text-white text-xl md:text-4xl flex-1 text-right truncate">{match.awayTeam}</h4>
+                                            </div>
+                                        )}
+
+                                        <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest mt-3">
+                                            {match.type === "channel" ? "Transmisión Destacada" : match.league}
+                                        </span>
                                     </div>
                                 </div>
                             </Link>
@@ -304,7 +316,7 @@ export default function LiveSection() {
                 </div>
             )}
 
-                        {/* CARRUSELES DINÁMICOS REDISEÑADOS */}
+            {/* CARRUSELES DINÁMICOS */}
             <CarouselRow title="💎 Principales" items={canalesPrincipales} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
             <CarouselRow title="🇪🇨 Ecuador" items={canalesEcuatorianos} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
             <CarouselRow title="🌎 Sudamérica" items={canalesSudamerica} isAdmin={isAdmin} handleDelete={handleDelete} handleEditTime={handleEditTime} handleEditLink={handleEditLink} />
@@ -316,5 +328,4 @@ export default function LiveSection() {
       )}
     </div>
   );
-}
-
+ }

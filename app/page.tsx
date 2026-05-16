@@ -161,7 +161,7 @@ export default function AppShell() {
             {/* NAVBAR SUPERIOR FIJO - ESTILO LIQUID GLASS */}
       <nav className="shrink-0 flex justify-between items-center bg-black/20 backdrop-blur-2xl px-5 py-3 z-40 border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.1)] h-16">
         <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white uppercase">
-            SOCIAL<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 drop-shadow-sm">BET</span>
+            CUCHOS<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 drop-shadow-sm">TV</span>
         </h1>
         <div>
             {!user ? (
